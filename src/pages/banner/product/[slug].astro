@@ -1,0 +1,889 @@
+---
+/**
+ * Banner Product Detail Page
+ * 배너공장 스타일 상세페이지 — 옵션 선택, 수량, 가격 계산, 장바구니/바로주문
+ */
+import Layout from '../../../layouts/Layout.astro';
+import BannerHeader from '../../../components/banner/BannerHeader.astro';
+
+const { slug } = Astro.params;
+
+// --- Shared data for BannerHeader ---
+const FALLBACK_SERVICES = [
+  { icon: 'banner', title: '배너·거치대', desc: '실내외 배너 거치대 전문 제작·판매' },
+  { icon: 'banner', title: '현수막', desc: '일반·장폭·솔벤·라텍스 현수막 제작' },
+  { icon: 'banner', title: '윈드배너', desc: 'F형·S형·H형 윈드배너 거치대·출력' },
+  { icon: 'banner', title: '입간판', desc: 'A형·물통·사인스탠드 입간판 제작' },
+  { icon: 'banner', title: '실사출력', desc: '접착·비접착·시트커팅·차량용 출력' },
+  { icon: 'banner', title: '족자봉·롤블라인드', desc: '족자봉, 롤블라인드 제작·판매' },
+];
+const FALLBACK_CONTACT = {
+  company: 'issac.design', phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123', email: 'contact@issac.design',
+};
+const categories = [
+  { id: 'banner-stand', name: '배너거치대', order_index: 1 },
+  { id: 'banner-cloth', name: '현수막', order_index: 2 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 3 },
+  { id: 'sign-board', name: '입간판', order_index: 4 },
+  { id: 'print-output', name: '실사출력', order_index: 5 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 6 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 7 },
+];
+const SUBCATEGORY_MAP: Record<string, { label: string }[]> = {
+  '배너거치대': [{ label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' }, { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' }],
+  '현수막': [{ label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' }, { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' }, { label: '텐트천' }, { label: '부직포' }, { label: '부속품' }],
+  '윈드배너': [{ label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' }],
+  '입간판': [{ label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' }],
+  '실사출력': [{ label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' }, { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' }],
+  '족자봉·롤블라인드': [{ label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' }],
+  '고객맞춤결제': [{ label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' }],
+};
+const megaMenuData = categories.map(cat => ({
+  id: cat.id, name: cat.name,
+  subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
+}));
+
+// 상품 데이터
+const PRODUCTS: Record<string, any> = {
+  'banner-stand-outdoor-l': {
+    name: '실외 배너거치대 (대형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '실외거치대',
+    basePrice: 45000,
+    thumbnail: 'https://picsum.photos/seed/bstand/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bstand/800/800.webp',
+    ],
+    description: '야외 행사, 매장 앞 홍보에 최적화된 대형 배너 거치대입니다. 견고한 철제 프레임과 안정적인 베이스로 바람에도 흔들리지 않습니다.',
+    specs: [
+      { label: '사이즈', value: '600×1800mm' },
+      { label: '재질', value: '스틸 프레임 + 철판 베이스' },
+      { label: '무게', value: '약 5.2kg' },
+      { label: '출력물', value: '별도 주문' },
+    ],
+    options: [
+      { group: '거치대', items: [
+        { label: '실외 대형 (600×1800)', price: 45000 },
+        { label: '실외 중형 (500×1500)', price: 38000 },
+        { label: '실외 소형 (400×1200)', price: 32000 },
+      ]},
+      { group: '출력물', items: [
+        { label: '선택안함', price: 0 },
+        { label: '단면 출력', price: 8000 },
+        { label: '양면 출력', price: 14000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '물통 베이스', price: 12000 },
+        { label: '모래주머니', price: 5000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '출력물 오전 11시', pickup: '거치대 오후 4시' },
+  },
+  'banner-cloth-normal': {
+    name: '일반현수막 (맞춤사이즈)',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '일반현수막',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/bcloth/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth/800/800.webp'],
+    description: '맞춤 사이즈로 제작하는 일반현수막입니다. 실내외 겸용, 고해상도 디지털 인쇄.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (가로×세로)' },
+      { label: '재질', value: '터폴린 (방수)' },
+      { label: '인쇄', value: '디지털 솔벤 인쇄' },
+      { label: '마감', value: '열재단 + 아일렛' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×300cm', price: 15000 },
+        { label: '90×600cm', price: 25000 },
+        { label: '120×300cm', price: 20000 },
+        { label: '120×600cm', price: 32000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 3000 },
+        { label: '벨크로 마감', price: 5000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '현수막 로프 (5m)', price: 2000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'wind-banner-f-s': {
+    name: '윈드배너 F형 (소형)',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: '윈드배너F형',
+    basePrice: 38000,
+    thumbnail: 'https://picsum.photos/seed/bwind/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-d2/1140/800.webp',
+      'https://picsum.photos/seed/bwind-d3/1140/600.webp',
+    ],
+    description: 'F형 윈드배너 거치대 + 철판 베이스 세트. 깃발 형태의 날렵한 디자인으로 시인성이 뛰어납니다.',
+    specs: [
+      { label: '총 높이', value: '2,100mm (소형)' },
+      { label: '출력면 사이즈', value: '1,600×750mm' },
+      { label: '베이스', value: '철판 베이스 (4.5kg)' },
+      { label: '구성품', value: '폴대 + 철판 베이스' },
+    ],
+    options: [
+      { group: '거치대', items: [
+        { label: '윈드F형 (소형)+철판', price: 38000 },
+        { label: '윈드F형 (중형)+철판', price: 48000 },
+        { label: '윈드F형 (대형)+철판', price: 58000 },
+      ]},
+      { group: '출력물', items: [
+        { label: '선택안함', price: 0 },
+        { label: '단면 출력 1장', price: 15000 },
+        { label: '양면 출력 1장', price: 25000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '물통 베이스 (교체)', price: 15000 },
+        { label: '십자 베이스 (교체)', price: 18000 },
+        { label: '캐리백', price: 8000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 8,000원~ (수량별 차등)' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '출력물 오전 11시', pickup: '거치대 오후 4시' },
+  },
+  'sign-board-a': {
+    name: 'A형 입간판',
+    category: { id: 'sign-board', name: '입간판' },
+    subcategory: 'A형입간판',
+    basePrice: 55000,
+    thumbnail: 'https://picsum.photos/seed/bsign/400/400.webp',
+    images: ['https://picsum.photos/seed/bsign/800/800.webp'],
+    description: '양면 포스터 교체형 A형 입간판. 매장 앞 메뉴판, 안내판으로 활용.',
+    specs: [{ label: '사이즈', value: 'A1 (594×841mm)' }, { label: '재질', value: '알루미늄 프레임' }, { label: '무게', value: '약 4.8kg' }],
+    options: [
+      { group: '사이즈', items: [{ label: 'A1 사이즈', price: 55000 }, { label: 'A2 사이즈', price: 42000 }, { label: 'B1 사이즈', price: 65000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '양면 포스터 출력', price: 12000 }]},
+      { group: '별매품', items: [{ label: '선택안함', price: 0 }, { label: '방수 커버', price: 8000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'print-output-adhesive': {
+    name: '실사출력 (접착용)',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: '접착용',
+    basePrice: 8000,
+    thumbnail: 'https://picsum.photos/seed/bprint/800/800.webp',
+    images: ['https://picsum.photos/seed/bprint/800/800.webp'],
+    description: '접착형 실사출력. 유리면, 벽면 등에 부착 가능. 평당 가격.',
+    specs: [{ label: '해상도', value: '1440dpi' }, { label: '재질', value: '접착 시트지' }, { label: '단위', value: '평당 (㎡)' }],
+    options: [
+      { group: '재질', items: [{ label: '일반 접착시트', price: 8000 }, { label: '고급 접착시트', price: 12000 }, { label: '탈부착 접착시트', price: 15000 }]},
+      { group: '라미네이팅', items: [{ label: '선택안함', price: 0 }, { label: '유광 라미네이팅', price: 3000 }, { label: '무광 라미네이팅', price: 3000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'scroll-basic': {
+    name: '족자봉 (기본형)',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '족자봉',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/bscroll/800/800.webp',
+    images: ['https://picsum.photos/seed/bscroll/800/800.webp'],
+    description: '기본형 족자봉 세트. 포스터, 현수막 등을 걸어서 전시.',
+    specs: [{ label: '길이', value: '600mm / 900mm / 1200mm' }, { label: '재질', value: '알루미늄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '600mm', price: 12000 }, { label: '900mm', price: 15000 }, { label: '1200mm', price: 18000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 8000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'custom-payment': {
+    name: '고객맞춤결제',
+    category: { id: 'custom-payment', name: '고객맞춤결제' },
+    subcategory: '고객맞춤결제',
+    basePrice: 0,
+    thumbnail: 'https://picsum.photos/seed/bcustom/800/800.webp',
+    images: ['https://picsum.photos/seed/bcustom/800/800.webp'],
+    description: '상담 후 확정된 금액으로 결제하는 맞춤 결제 페이지입니다.',
+    specs: [],
+    options: [
+      { group: '결제 유형', items: [{ label: '고객맞춤결제', price: 0 }, { label: '디자인비결제', price: 0 }, { label: '배송비결제', price: 0 }]},
+    ],
+    deliveryOptions: [{ label: '상담 후 안내', info: '' }],
+    deadlines: { courier: '-', pickup: '-' },
+  },
+};
+
+const product = PRODUCTS[slug as string];
+if (!product) return Astro.redirect('/banner');
+
+export async function getStaticPaths() {
+  const slugs = ['banner-stand-outdoor-l','banner-cloth-normal','wind-banner-f-s','sign-board-a','print-output-adhesive','scroll-basic','custom-payment'];
+  return slugs.map(s => ({ params: { slug: s } }));
+}
+---
+
+<Layout title={`${product.name} - issac.design 배너`} description={product.description}>
+
+<style is:global>
+  /* ===== Product Detail ===== */
+  .pd-breadcrumb {
+    padding: 14px 0;
+    font-size: 13px;
+    color: #999;
+    text-align: right;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .pd-breadcrumb a { color: #666; }
+  .pd-breadcrumb a:hover { color: #1A4D2E; text-decoration: underline; }
+  .pd-breadcrumb span { color: #222; font-weight: 600; }
+
+  .pd-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr 280px;
+    gap: 0;
+    padding: 32px 0 64px;
+    align-items: start;
+  }
+
+  /* Left: Image */
+  .pd-image {
+    padding-right: 32px;
+  }
+  .pd-image-main {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+  }
+  .pd-image-thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .pd-image-thumb {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .pd-image-thumb.active { border-color: #1A4D2E; }
+
+  /* Center: Options */
+  .pd-options {
+    padding: 0 24px;
+    border-left: 1px solid #eee;
+  }
+  .pd-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .pd-item-label { font-size: 14px; color: #666; font-weight: 600; }
+  .pd-item-value { font-size: 15px; font-weight: 700; color: #222; }
+  .pd-guide-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .pd-guide-btn:hover { border-color: #1A4D2E; color: #1A4D2E; }
+
+  .pd-option-group {
+    margin-bottom: 16px;
+  }
+  .pd-option-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 6px;
+  }
+  .pd-option-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #222;
+    cursor: pointer;
+    font-family: inherit;
+    appearance: auto;
+  }
+  .pd-option-select:focus { border-color: #1A4D2E; outline: none; }
+
+  .pd-qty-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pd-qty-input {
+    width: 60px;
+    padding: 8px;
+    text-align: center;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+  }
+  .pd-qty-unit { font-size: 14px; color: #555; }
+
+  /* Delivery */
+  .pd-delivery {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  .pd-delivery-select {
+    width: 70%;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    font-family: inherit;
+    appearance: auto;
+  }
+  .pd-delivery-info {
+    font-size: 12px;
+    color: #e8590c;
+    margin-top: 4px;
+  }
+
+  /* File & Note */
+  .pd-file-row {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  .pd-file-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .pd-file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #1A4D2E;
+    color: #1A4D2E;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .pd-file-btn:hover { background: #f0f8f3; }
+
+  .pd-note {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  .pd-note textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .pd-note textarea:focus { border-color: #1A4D2E; outline: none; }
+
+  /* Right: Summary */
+  .pd-summary {
+    border-left: 1px solid #eee;
+    padding-left: 24px;
+    position: sticky;
+    top: 80px;
+  }
+  .pd-summary-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pd-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13px;
+    color: #555;
+  }
+  .pd-summary-row .val { color: #222; font-weight: 600; }
+  .pd-summary-row.highlight .val { color: #e8590c; font-weight: 800; }
+
+  .pd-summary-divider {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 10px 0;
+  }
+
+  .pd-summary-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 0;
+    border-top: 2px solid #222;
+    margin-top: 8px;
+  }
+  .pd-summary-total .label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e8590c;
+  }
+  .pd-summary-total .price {
+    font-size: 24px;
+    font-weight: 800;
+    color: #e8590c;
+  }
+  .pd-summary-total .won {
+    font-size: 16px;
+  }
+
+  .pd-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .pd-btn-cart {
+    flex: 1;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border: 2px solid #1A4D2E;
+    color: #1A4D2E;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .pd-btn-cart:hover { background: #f0f8f3; }
+  .pd-btn-order {
+    flex: 1;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    color: #fff;
+    background: #1A4D2E;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .pd-btn-order:hover { background: #154025; }
+
+  .pd-deadline {
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .pd-deadline-title {
+    background: #f5f5f5;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e8590c;
+    text-align: center;
+  }
+  .pd-deadline-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #555;
+    border-top: 1px solid #eee;
+  }
+  .pd-deadline-row .type { font-weight: 600; color: #333; }
+
+  /* Specs */
+  .pd-specs {
+    padding: 40px 0;
+  }
+  .pd-specs-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222;
+  }
+  .pd-specs-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .pd-specs-table th,
+  .pd-specs-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  .pd-specs-table th {
+    width: 140px;
+    font-weight: 700;
+    color: #333;
+    background: #f9f9f9;
+  }
+  .pd-specs-table td { color: #555; }
+
+  .pd-desc {
+    padding: 24px 0 40px;
+  }
+  .pd-desc-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222;
+  }
+  .pd-desc-text {
+    font-size: 15px;
+    color: #444;
+    line-height: 1.8;
+  }
+
+  /* Detail Images */
+  .pd-detail-images {
+    padding: 40px 0;
+  }
+  .pd-detail-images-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222;
+  }
+  .pd-detail-images-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .pd-detail-images-list img {
+    width: 100%;
+    display: block;
+  }
+
+  /* Responsive */
+  @media (max-width: 960px) {
+    .pd-layout {
+      grid-template-columns: 1fr 1fr;
+    }
+    .pd-summary {
+      grid-column: 1 / -1;
+      border-left: none;
+      padding-left: 0;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+      position: static;
+    }
+  }
+  @media (max-width: 768px) {
+    .pd-layout {
+      grid-template-columns: 1fr;
+    }
+    .pd-image { padding-right: 0; margin-bottom: 24px; }
+    .pd-options { padding: 0; border-left: none; }
+  }
+</style>
+
+<div class="hl">
+  <BannerHeader contactInfo={FALLBACK_CONTACT} services={FALLBACK_SERVICES} megaMenuData={megaMenuData} />
+
+  <!-- Breadcrumb -->
+  <div class="wrap">
+    <div class="pd-breadcrumb">
+      <a href="/banner">HOME</a> &gt;
+      <a href={`/banner/category/${product.category.id}`}>{product.category.name}</a> &gt;
+      <span>{product.subcategory}</span>
+    </div>
+  </div>
+
+  <!-- Product Detail -->
+  <div class="wrap">
+    <div class="pd-layout">
+      <!-- Left: Image -->
+      <div class="pd-image">
+        <img src={product.thumbnail} alt={product.name} class="pd-image-main" id="main-image" />
+        <div class="pd-image-thumbs">
+          {product.images.map((img: string, i: number) => (
+            <img src={img} alt={`${product.name} ${i+1}`} class={`pd-image-thumb ${i === 0 ? 'active' : ''}`} data-src={img} />
+          ))}
+        </div>
+      </div>
+
+      <!-- Center: Options -->
+      <div class="pd-options">
+        <div class="pd-title-row">
+          <div>
+            <span class="pd-item-label">품목</span>
+            <span class="pd-item-value" style="margin-left:12px;">{product.subcategory}</span>
+          </div>
+          <button class="pd-guide-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            작업가이드
+          </button>
+        </div>
+
+        {product.options.map((opt: any) => (
+          <div class="pd-option-group">
+            <label class="pd-option-label">{opt.group}</label>
+            <div class="pd-qty-row">
+              <select class="pd-option-select" data-group={opt.group}>
+                {opt.items.map((item: any) => (
+                  <option value={item.price}>{item.label}{item.price > 0 ? ` (+${item.price.toLocaleString()}원)` : ''}</option>
+                ))}
+              </select>
+              <input type="number" class="pd-qty-input" value="1" min="1" data-group={opt.group} />
+              <span class="pd-qty-unit">개</span>
+            </div>
+          </div>
+        ))}
+
+        <!-- Delivery -->
+        <div class="pd-delivery">
+          <label class="pd-option-label">배송방법</label>
+          <select class="pd-delivery-select" id="delivery-select">
+            {product.deliveryOptions.map((d: any) => (
+              <option value={d.label}>{d.label}</option>
+            ))}
+          </select>
+          <div class="pd-delivery-info" id="delivery-info">
+            {product.deliveryOptions[0]?.info}
+          </div>
+        </div>
+
+        <!-- File -->
+        <div class="pd-file-row">
+          <label class="pd-option-label">파일첨부</label>
+          <div class="pd-file-btns">
+            <button class="pd-file-btn" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              파일첨부
+            </button>
+            <button class="pd-file-btn" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              템플릿다운
+            </button>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="pd-note">
+          <label class="pd-option-label">요청사항</label>
+          <textarea placeholder="요청사항을 입력해 주세요."></textarea>
+        </div>
+      </div>
+
+      <!-- Right: Summary -->
+      <div class="pd-summary">
+        <div class="pd-summary-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10M16 7v10M2 12h20"/></svg>
+          견적서출력
+        </div>
+
+        <div id="summary-rows">
+          {product.options.map((opt: any) => (
+            <div class="pd-summary-row" data-summary={opt.group}>
+              <span>{opt.group}</span>
+              <span class="val">{opt.items[0].price > 0 ? `${opt.items[0].price.toLocaleString()}원` : '0원'}</span>
+            </div>
+          ))}
+        </div>
+
+        <div class="pd-summary-row highlight">
+          <span>총매수</span>
+          <span class="val" id="summary-qty">1장</span>
+        </div>
+
+        <hr class="pd-summary-divider" />
+
+        <div class="pd-summary-row">
+          <span>상품금액</span>
+          <span class="val" id="summary-subtotal">{product.basePrice.toLocaleString()}원</span>
+        </div>
+        <div class="pd-summary-row">
+          <span>부가세</span>
+          <span class="val" id="summary-tax">{Math.round(product.basePrice * 0.1).toLocaleString()}원</span>
+        </div>
+
+        <div class="pd-summary-total">
+          <span class="label">최종금액</span>
+          <span class="price" id="summary-total">{Math.round(product.basePrice * 1.1).toLocaleString()}<span class="won">원</span></span>
+        </div>
+
+        <div class="pd-actions">
+          <button class="pd-btn-cart" type="button">장바구니</button>
+          <button class="pd-btn-order" type="button">바로주문</button>
+        </div>
+
+        <div class="pd-deadline">
+          <div class="pd-deadline-title">당일출고 마감시간</div>
+          <div class="pd-deadline-row">
+            <span class="type">택배</span>
+            <span>{product.deadlines.courier}</span>
+          </div>
+          <div class="pd-deadline-row">
+            <span class="type">방문수령</span>
+            <span>{product.deadlines.pickup}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specs -->
+  {product.specs.length > 0 && (
+    <div class="wrap">
+      <div class="pd-specs">
+        <h2 class="pd-specs-title">상품 사양</h2>
+        <table class="pd-specs-table">
+          <tbody>
+            {product.specs.map((s: any) => (
+              <tr>
+                <th>{s.label}</th>
+                <td>{s.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- Description -->
+  <div class="wrap">
+    <div class="pd-desc">
+      <h2 class="pd-desc-title">상품 설명</h2>
+      <p class="pd-desc-text">{product.description}</p>
+    </div>
+  </div>
+
+  <!-- Detail Images -->
+  {product.images && product.images.length > 0 && (
+    <div class="wrap">
+      <div class="pd-detail-images">
+        <h2 class="pd-detail-images-title">상세 설명</h2>
+        <div class="pd-detail-images-list">
+          {product.images.map((img: string, i: number) => (
+            <img src={img} alt={`${product.name} 상세 ${i+1}`} loading="lazy" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- Footer -->
+  <footer style="background:#1a1a1a;color:#777;padding:32px 0;font-size:12px;text-align:center;">
+    <div class="wrap">
+      <p>&copy; {new Date().getFullYear()} issac.design · 배너 전문 제작 | <a href={`tel:${FALLBACK_CONTACT.phone}`} style="color:#aaa;">{FALLBACK_CONTACT.phone}</a></p>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // Price calculation
+  const selects = document.querySelectorAll<HTMLSelectElement>('.pd-option-select');
+  const qtys = document.querySelectorAll<HTMLInputElement>('.pd-qty-input');
+  const summaryRows = document.querySelectorAll<HTMLElement>('[data-summary]');
+
+  function calc() {
+    let total = 0;
+    let totalQty = 0;
+
+    selects.forEach((sel, i) => {
+      const price = Number(sel.value) || 0;
+      const qty = Number(qtys[i]?.value) || 1;
+      const lineTotal = price * qty;
+      total += lineTotal;
+      totalQty += qty;
+
+      // Update summary row
+      const group = sel.dataset.group;
+      const row = document.querySelector(`[data-summary="${group}"] .val`);
+      if (row) row.textContent = lineTotal.toLocaleString() + '원';
+    });
+
+    const tax = Math.round(total * 0.1);
+    const grand = total + tax;
+
+    const qtyEl = document.getElementById('summary-qty');
+    const subEl = document.getElementById('summary-subtotal');
+    const taxEl = document.getElementById('summary-tax');
+    const totalEl = document.getElementById('summary-total');
+
+    if (qtyEl) qtyEl.textContent = totalQty + '장';
+    if (subEl) subEl.textContent = total.toLocaleString() + '원';
+    if (taxEl) taxEl.textContent = tax.toLocaleString() + '원';
+    if (totalEl) totalEl.innerHTML = grand.toLocaleString() + '<span class="won">원</span>';
+  }
+
+  selects.forEach(s => s.addEventListener('change', calc));
+  qtys.forEach(q => q.addEventListener('input', calc));
+
+  // Image thumb click
+  const mainImg = document.getElementById('main-image') as HTMLImageElement;
+  document.querySelectorAll<HTMLImageElement>('.pd-image-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      if (mainImg) mainImg.src = thumb.dataset.src || '';
+      document.querySelectorAll('.pd-image-thumb').forEach(t => t.classList.remove('active'));
+      thumb.classList.add('active');
+    });
+  });
+
+  // Cart / Order buttons
+  document.querySelector('.pd-btn-cart')?.addEventListener('click', () => {
+    alert('장바구니에 추가되었습니다.');
+  });
+  document.querySelector('.pd-btn-order')?.addEventListener('click', () => {
+    alert('주문 페이지로 이동합니다.');
+  });
+</script>
+
+</Layout>

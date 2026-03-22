@@ -21,6 +21,8 @@ const InquiriesPage = lazy(() => import('./pages/InquiriesPage'));
 const SimulatorSettingsPage = lazy(() => import('./pages/SimulatorSettingsPage'));
 const SiteSettingsPage = lazy(() => import('./pages/SiteSettingsPage'));
 
+const BannerProductListPage = lazy(() => import('./pages/BannerProductListPage'));
+const BannerProductEditPage = lazy(() => import('./pages/BannerProductEditPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const MembersPage = lazy(() => import('./pages/MembersPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -55,6 +57,8 @@ export default function AdminRouter() {
             <Route path="/simulator" element={<SimulatorSettingsPage />} />
             <Route path="/settings" element={<SiteSettingsPage />} />
 
+            <Route path="/banner-products" element={<BannerProductListPage />} />
+            <Route path="/banner-products/:id" element={<BannerProductEditPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/members" element={<MembersPage />} />
             <Route path="*" element={<NotFoundPage />} />

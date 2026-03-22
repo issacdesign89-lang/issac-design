@@ -1,7 +1,7 @@
 ---
 /**
- * HomeHeader — 공통 헤더 + 히어로 컴포넌트
- * /home 및 /home/category/[id] 등 서브페이지에서 공유
+ * BannerHeader — 배너공장 공통 헤더 + 히어로 컴포넌트
+ * /banner 및 /banner/category/[id] 등 서브페이지에서 공유
  */
 interface SubItem {
   label: string;
@@ -95,6 +95,33 @@ const { contactInfo, services, megaMenuData } = Astro.props;
   .top-bar a { color: #ccc; }
   .top-bar a:hover { color: #fff; }
   .top-bar-right { display: flex; gap: 16px; }
+
+  /* User menu */
+  .user-menu {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 13px;
+  }
+  .user-menu .wrap {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+  .user-menu a {
+    display: inline-block;
+    padding: 8px 16px;
+    color: #555;
+    font-weight: 500;
+    transition: color 0.15s;
+    border-left: 1px solid #e0e0e0;
+  }
+  .user-menu a:last-child { padding-right: 0; }
+  .user-menu a:first-child { border-left: none; }
+  .user-menu a:hover { color: #1A4D2E; }
+
+  @media (max-width: 768px) {
+    .user-menu a { padding: 6px 10px; font-size: 12px; }
+  }
 
   /* ===== Header ===== */
   .header {
@@ -575,7 +602,7 @@ const { contactInfo, services, megaMenuData } = Astro.props;
 <!-- Top Bar -->
 <div class="top-bar">
   <div class="wrap">
-    <span>간판 전문 제작·시공 | 전국 배송·설치</span>
+    <span>배너·현수막 전문 제작 | 전국 배송</span>
     <div class="top-bar-right">
       <a href={"tel:" + contactInfo.phone}>{contactInfo.phone}</a>
       <span>{contactInfo.hours}</span>
@@ -583,10 +610,19 @@ const { contactInfo, services, megaMenuData } = Astro.props;
   </div>
 </div>
 
+<!-- User Menu -->
+<div class="user-menu">
+  <div class="wrap">
+    <a href="/shop/login">로그인</a>
+    <a href="/shop/quote-cart">장바구니</a>
+    <a href="/shop/mypage">마이페이지</a>
+  </div>
+</div>
+
 <!-- Header with Mega Menu -->
 <header class="header" id="site-header">
   <div class="wrap">
-    <a href="/home" class="logo">issac.design <span>간판 전문</span></a>
+    <a href="/banner" class="logo">issac.design <span>배너 전문</span></a>
 
     <nav class="main-nav" id="main-nav">
       <!-- 전체 (Mega Menu - 모든 카테고리 표시) -->
@@ -600,24 +636,24 @@ const { contactInfo, services, megaMenuData } = Astro.props;
       <!-- 각 카테고리 메뉴 (소분류 드롭다운 내장) -->
       {megaMenuData.map((cat) => (
         <div class="nav-item nav-cat-item" data-menu={cat.id} data-cat-filter={cat.id}>
-          <a href={`/home/category/${cat.id}`} class="nav-trigger nav-cat-link">
+          <a href={`/banner/category/${cat.id}`} class="nav-trigger nav-cat-link">
             {cat.name}
             <svg class="nav-arrow" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
           </a>
           <div class="cat-dropdown">
             <ul class="cat-dropdown-list">
               {cat.subcategories.map((sub) => (
-                <li><a href={sub.href || `/home/category/${cat.id}`}>{sub.label}</a></li>
+                <li><a href={sub.href || `/banner/category/${cat.id}`}>{sub.label}</a></li>
               ))}
             </ul>
-            <a href={`/home/category/${cat.id}`} class="cat-dropdown-more">전체보기 &rarr;</a>
+            <a href={`/banner/category/${cat.id}`} class="cat-dropdown-more">전체보기 &rarr;</a>
           </div>
         </div>
       ))}
     </nav>
 
     <div class="header-right">
-      <a href="/home#contact" class="btn-quote">견적 문의</a>
+      <a href="/banner#contact" class="btn-quote">견적 문의</a>
       <button class="mobile-toggle" id="mobile-toggle" aria-label="메뉴">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
@@ -632,13 +668,13 @@ const { contactInfo, services, megaMenuData } = Astro.props;
     <div class="mega-inner">
       {megaMenuData.map((cat) => (
         <div class="mega-col">
-          <a href={`/home/category/${cat.id}`} class="mega-col-title">{cat.name}</a>
+          <a href={`/banner/category/${cat.id}`} class="mega-col-title">{cat.name}</a>
           <ul class="mega-sub-list">
             {cat.subcategories.map((sub) => (
-              <li><a href={sub.href || `/home/category/${cat.id}`}>{sub.label}</a></li>
+              <li><a href={sub.href || `/banner/category/${cat.id}`}>{sub.label}</a></li>
             ))}
           </ul>
-          <a href={`/home/category/${cat.id}`} class="mega-col-more">전체보기 &rarr;</a>
+          <a href={`/banner/category/${cat.id}`} class="mega-col-more">전체보기 &rarr;</a>
         </div>
       ))}
     </div>
@@ -652,64 +688,64 @@ const { contactInfo, services, megaMenuData } = Astro.props;
 <!-- Hero Slider -->
 <section class="hero-slider" id="hero-slider">
   <div class="hero-slide active" data-slide="0">
-    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1763673263764-4d189ab2f03f?w=1400&q=80')"></div>
+    <div class="hero-slide-bg" style="background-image:url('https://picsum.photos/seed/banner1/1400/800.webp')"></div>
     <div class="hero-slide-overlay"></div>
     <div class="hero-slide-content">
       <div class="hero-slide-text">
-        <div class="hero-badge">SINCE 2010 · 15년 전문 제작</div>
-        <h2>간판 제작부터 시공까지<br/>원스톱 전문 업체</h2>
-        <p>LED 채널 간판, 네온사인, 현수막, 옥외광고까지.<br/>디자인·제작·설치를 한번에 해결하세요.</p>
+        <div class="hero-badge">배너공장 · 배너 전문 제작</div>
+        <h2>배너·현수막 제작<br/>전문 배너공장</h2>
+        <p>배너, 현수막, 윈드배너, 입간판, 실사출력까지.<br/>디자인·제작·배송을 한번에 해결하세요.</p>
         <div class="hero-actions">
-          <a href="/shop" class="btn-hero btn-hero-primary">쇼핑몰 바로가기</a>
-          <a href="/home#contact" class="btn-hero btn-hero-outline">무료 견적 신청</a>
+          <a href="/banner" class="btn-hero btn-hero-primary">전체 상품 보기</a>
+          <a href="/banner#contact" class="btn-hero btn-hero-outline">무료 견적 신청</a>
         </div>
       </div>
       <div class="hero-stats">
         <div class="stat-item"><span class="stat-num">15+</span><span class="stat-label">년 경력</span></div>
-        <div class="stat-item"><span class="stat-num">3,200+</span><span class="stat-label">시공 실적</span></div>
+        <div class="stat-item"><span class="stat-num">50,000+</span><span class="stat-label">제작 실적</span></div>
         <div class="stat-item"><span class="stat-num">98%</span><span class="stat-label">고객 만족</span></div>
       </div>
     </div>
   </div>
 
   <div class="hero-slide" data-slide="1">
-    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1551560798-b935eb510ab3?w=1400&q=80')"></div>
+    <div class="hero-slide-bg" style="background-image:url('https://picsum.photos/seed/banner2/1400/800.webp')"></div>
     <div class="hero-slide-overlay" style="background:linear-gradient(135deg, rgba(45,25,10,0.85) 0%, rgba(45,25,10,0.5) 100%)"></div>
     <div class="hero-slide-content">
       <div class="hero-slide-text">
-        <div class="hero-badge">NEON SIGN · 맞춤 제작</div>
-        <h2>감성을 담은<br/>네온사인 제작</h2>
-        <p>카페, 레스토랑, 매장에 딱 맞는 맞춤형 네온사인.<br/>20가지 컬러, 자유로운 디자인.</p>
+        <div class="hero-badge">WIND BANNER · 윈드배너</div>
+        <h2>윈드배너·거치대<br/>전문 제작</h2>
+        <p>F형, S형, H형 윈드배너 거치대와 출력물.<br/>야외 광고에 최적화된 내구성.</p>
         <div class="hero-actions">
-          <a href="/shop" class="btn-hero btn-hero-primary">네온사인 보기</a>
-          <a href="/home#contact" class="btn-hero btn-hero-outline">견적 문의</a>
+          <a href="/banner" class="btn-hero btn-hero-primary">윈드배너 보기</a>
+          <a href="/banner#contact" class="btn-hero btn-hero-outline">견적 문의</a>
         </div>
       </div>
       <div class="hero-stats">
-        <div class="stat-item"><span class="stat-num">20+</span><span class="stat-label">컬러</span></div>
-        <div class="stat-item"><span class="stat-num">5일</span><span class="stat-label">제작기간</span></div>
-        <div class="stat-item"><span class="stat-num">100%</span><span class="stat-label">맞춤제작</span></div>
+        <div class="stat-item"><span class="stat-num">3종</span><span class="stat-label">거치대 타입</span></div>
+        <div class="stat-item"><span class="stat-num">당일</span><span class="stat-label">출고 가능</span></div>
+        <div class="stat-item"><span class="stat-num">전국</span><span class="stat-label">무료 배송</span></div>
       </div>
     </div>
   </div>
 
   <div class="hero-slide" data-slide="2">
-    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1646119843923-7cc001121d5d?w=1400&q=80')"></div>
+    <div class="hero-slide-bg" style="background-image:url('https://picsum.photos/seed/banner3/1400/800.webp')"></div>
     <div class="hero-slide-overlay" style="background:linear-gradient(135deg, rgba(10,30,60,0.85) 0%, rgba(10,30,60,0.5) 100%)"></div>
     <div class="hero-slide-content">
       <div class="hero-slide-text">
-        <div class="hero-badge">LED CHANNEL · 프리미엄</div>
-        <h2>빛으로 만드는<br/>브랜드 아이덴티티</h2>
-        <p>고휘도 LED 채널 간판으로 낮과 밤 모두 빛나는 브랜드.<br/>프리미엄 소재, 5년 보증.</p>
+        <div class="hero-badge">실사출력 · 대형 인쇄</div>
+        <h2>고품질 실사출력<br/>대형 인쇄 전문</h2>
+        <p>접착·비접착 시트, 차량 래핑, POP 보드까지.<br/>고해상도 출력으로 선명한 광고 효과.</p>
         <div class="hero-actions">
-          <a href="/shop" class="btn-hero btn-hero-primary">LED 간판 보기</a>
-          <a href="/home#contact" class="btn-hero btn-hero-outline">무료 시안 요청</a>
+          <a href="/banner" class="btn-hero btn-hero-primary">실사출력 보기</a>
+          <a href="/banner#contact" class="btn-hero btn-hero-outline">무료 시안 요청</a>
         </div>
       </div>
       <div class="hero-stats">
-        <div class="stat-item"><span class="stat-num">5년</span><span class="stat-label">보증</span></div>
-        <div class="stat-item"><span class="stat-num">전국</span><span class="stat-label">시공</span></div>
-        <div class="stat-item"><span class="stat-num">1년</span><span class="stat-label">무상 A/S</span></div>
+        <div class="stat-item"><span class="stat-num">1440</span><span class="stat-label">dpi 해상도</span></div>
+        <div class="stat-item"><span class="stat-num">대형</span><span class="stat-label">출력 가능</span></div>
+        <div class="stat-item"><span class="stat-num">1년</span><span class="stat-label">품질 보증</span></div>
       </div>
     </div>
   </div>

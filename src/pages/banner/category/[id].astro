@@ -1,24 +1,24 @@
 ---
 /**
  * Category Product List Page
- * /home/category/[id] — 카테고리별 제품 리스트
- * HomeHeader 공통 컴포넌트 사용 (메뉴 + 히어로 동일)
+ * /banner/category/[id] — 카테고리별 제품 리스트
+ * BannerHeader 공통 컴포넌트 사용 (메뉴 + 히어로 동일)
  */
 import Layout from '../../../layouts/Layout.astro';
-import HomeHeader from '../../../components/home/HomeHeader.astro';
+import BannerHeader from '../../../components/banner/BannerHeader.astro';
 import { supabase } from '../../../lib/supabase';
 import { APP_VERSION } from '../../../version';
 
 const { id } = Astro.params;
 
-// --- Shared data for HomeHeader ---
+// --- Shared data for BannerHeader ---
 const FALLBACK_SERVICES = [
-  { icon: 'led', title: 'LED 채널 간판', desc: '고휘도 프리미엄 LED 채널 간판 제작·시공' },
-  { icon: 'neon', title: '네온 사인', desc: '감성 네온사인 맞춤 제작' },
-  { icon: 'banner', title: '현수막·배너', desc: '현수막, X배너, 롤업배너 제작' },
-  { icon: 'outdoor', title: '옥외 광고', desc: '빌딩·옥상 대형 간판 제작 설치' },
-  { icon: 'acrylic', title: '아크릴 간판', desc: '아크릴 스카시, 갈바 간판 제작' },
-  { icon: 'install', title: '설치·A/S', desc: '전국 시공 + 1년 무상 A/S' },
+  { icon: 'banner', title: '배너·거치대', desc: '실내외 배너 거치대 전문 제작·판매' },
+  { icon: 'banner', title: '현수막', desc: '일반·장폭·솔벤·라텍스 현수막 제작' },
+  { icon: 'banner', title: '윈드배너', desc: 'F형·S형·H형 윈드배너 거치대·출력' },
+  { icon: 'banner', title: '입간판', desc: 'A형·물통·사인스탠드 입간판 제작' },
+  { icon: 'banner', title: '실사출력', desc: '접착·비접착·시트커팅·차량용 출력' },
+  { icon: 'banner', title: '족자봉·롤블라인드', desc: '족자봉, 롤블라인드 제작·판매' },
 ];
 
 const FALLBACK_CONTACT = {
@@ -31,17 +31,16 @@ const FALLBACK_CONTACT = {
 
 let services = FALLBACK_SERVICES;
 let contactInfo = FALLBACK_CONTACT;
-let categories: any[] = [];
-
-try {
-  const { data } = await supabase.from('service_items').select('*').eq('is_visible', true).order('order_index');
-  if (data?.length) services = data.map((s: any) => ({ icon: s.icon ?? 'led', title: s.title, desc: s.description }));
-} catch {}
-
-try {
-  const { data } = await supabase.from('product_categories').select('id, name, order_index').eq('is_visible', true).order('order_index');
-  if (data?.length) categories = data;
-} catch {}
+// 배너 전용 카테고리 (하드코딩)
+const categories = [
+  { id: 'banner-stand', name: '배너거치대', order_index: 1 },
+  { id: 'banner-cloth', name: '현수막', order_index: 2 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 3 },
+  { id: 'sign-board', name: '입간판', order_index: 4 },
+  { id: 'print-output', name: '실사출력', order_index: 5 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 6 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 7 },
+];
 
 try {
   const { data } = await supabase.from('site_config').select('key, value').eq('category', 'contact');
@@ -60,44 +59,60 @@ try {
 
 // Current category
 const current = categories.find(c => c.id === id);
-if (!current) return Astro.redirect('/home');
+if (!current) return Astro.redirect('/banner');
 
-// Fetch products for this category
-let products: any[] = [];
-try {
-  const { data } = await supabase.from('products').select('name, slug, price, thumbnail, description').eq('category_id', id).eq('is_visible', true).order('name');
-  if (data?.length) products = data;
-} catch {}
+// 배너 임시 상품 데이터
+const ALL_BANNER_PRODUCTS: Record<string, any[]> = {
+  'banner-stand': [
+    { name: '실외 배너거치대 (대형)', slug: 'banner-stand-outdoor-l', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bstand/400/400.webp', description: '야외 행사·매장 앞 홍보용 대형 거치대' },
+  ],
+  'banner-cloth': [
+    { name: '일반현수막 (맞춤사이즈)', slug: 'banner-cloth-normal', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth/400/400.webp', description: '맞춤 사이즈 일반현수막 제작' },
+  ],
+  'wind-banner': [
+    { name: '윈드배너 F형 (소형)', slug: 'wind-banner-f-s', price: '38,000원', thumbnail: 'https://picsum.photos/seed/bwind/400/400.webp', description: 'F형 소형 윈드배너 + 철판 베이스' },
+  ],
+  'sign-board': [
+    { name: 'A형 입간판', slug: 'sign-board-a', price: '55,000원', thumbnail: 'https://picsum.photos/seed/bsign/400/400.webp', description: '양면 A형 입간판 (포스터 교체 가능)' },
+  ],
+  'print-output': [
+    { name: '실사출력 (접착용)', slug: 'print-output-adhesive', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bprint/400/400.webp', description: '접착용 실사출력 (평당 가격)' },
+  ],
+  'scroll-blind': [
+    { name: '족자봉 (기본형)', slug: 'scroll-basic', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bscroll/400/400.webp', description: '기본형 족자봉 세트' },
+  ],
+  'custom-payment': [
+    { name: '고객맞춤결제', slug: 'custom-payment', price: '문의', thumbnail: 'https://picsum.photos/seed/bcustom/400/400.webp', description: '맞춤 주문 결제' },
+  ],
+};
+const products = ALL_BANNER_PRODUCTS[id as string] || [];
 
 // Subcategory mapping
 const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
-  'LED 채널 간판': [
-    { label: '전면발광 채널' }, { label: '측면발광 채널' }, { label: '전후면발광 채널' },
-    { label: '갈바 채널' }, { label: '스텐 채널' }, { label: '미니 채널' },
+  '배너거치대': [
+    { label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' },
+    { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' },
   ],
-  '네온 사인': [
-    { label: 'LED 네온사인' }, { label: '실리콘 네온' }, { label: '아크릴 네온' }, { label: '맞춤 디자인 네온' },
+  '현수막': [
+    { label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' },
+    { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' },
+    { label: '텐트천' }, { label: '부직포' }, { label: '부속품' },
   ],
-  '아크릴 간판': [
-    { label: '아크릴 스카시' }, { label: '아크릴 박스' }, { label: '아크릴 절곡' }, { label: 'LED 아크릴' },
+  '윈드배너': [
+    { label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' },
   ],
-  '현수막/배너': [
-    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  '입간판': [
+    { label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' },
   ],
-  '현수막·배너': [
-    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  '실사출력': [
+    { label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' },
+    { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' },
   ],
-  '동출 간판': [
-    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
+  '족자봉·롤블라인드': [
+    { label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' },
   ],
-  '돌출 간판': [
-    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
-  ],
-  '옥상 간판': [
-    { label: '옥상 채널' }, { label: '옥상 네온' }, { label: '옥상 철구조물' }, { label: '대형 LED' },
-  ],
-  '옥외 광고': [
-    { label: '빌딩 간판' }, { label: '옥상 간판' }, { label: '지주 간판' }, { label: '대형 LED' },
+  '고객맞춤결제': [
+    { label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' },
   ],
 };
 
@@ -110,16 +125,12 @@ const megaMenuData = categories.map(cat => ({
 const currentYear = new Date().getFullYear();
 
 export async function getStaticPaths() {
-  const { createClient } = await import('@supabase/supabase-js');
-  const url = import.meta.env.PUBLIC_SUPABASE_URL;
-  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-  const sb = createClient(url, key);
-  const { data } = await sb.from('product_categories').select('id').eq('is_visible', true);
-  return (data || []).map((c: any) => ({ params: { id: c.id } }));
+  const ids = ['banner-stand', 'banner-cloth', 'wind-banner', 'sign-board', 'print-output', 'scroll-blind', 'custom-payment'];
+  return ids.map(id => ({ params: { id } }));
 }
 ---
 
-<Layout title={`${current.name} - issac.design`} description={`${current.name} 제품 목록 - issac.design 간판 전문`}>
+<Layout title={`${current.name} - issac.design`} description={`${current.name} 제품 목록 - issac.design 배너 전문`}>
 
 <style is:global>
   /* ===== Category page content ===== */
@@ -230,12 +241,12 @@ export async function getStaticPaths() {
 
 <div class="hl">
   <!-- Shared Header + Hero -->
-  <HomeHeader contactInfo={contactInfo} services={services} megaMenuData={megaMenuData} />
+  <BannerHeader contactInfo={contactInfo} services={services} megaMenuData={megaMenuData} />
 
   <!-- Breadcrumb -->
   <div class="wrap">
     <div class="cp-breadcrumb">
-      <a href="/home">HOME</a> &gt; <span>{current.name}</span>
+      <a href="/banner">HOME</a> &gt; <span>{current.name}</span>
     </div>
   </div>
 
@@ -252,7 +263,7 @@ export async function getStaticPaths() {
     {products.length > 0 ? (
       <div class="cp-grid">
         {products.map((p) => (
-          <a href={`/shop/${p.slug}`} class="cp-card">
+          <a href={`/banner/product/${p.slug}`} class="cp-card">
             <img src={p.thumbnail} alt={p.name} class="cp-card-img" loading="lazy" />
             <div class="cp-card-name">
               <span>{p.name}</span>
@@ -266,7 +277,7 @@ export async function getStaticPaths() {
       <div class="cp-empty">
         <h2>등록된 제품이 없습니다</h2>
         <p>곧 새로운 제품이 추가될 예정입니다.</p>
-        <a href="/home#contact">문의하기</a>
+        <a href="/banner#contact">문의하기</a>
       </div>
     )}
   </div>

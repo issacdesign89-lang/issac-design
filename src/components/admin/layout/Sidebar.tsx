@@ -16,6 +16,7 @@ import {
   X,
   CreditCard,
   Users,
+  Flag,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -28,6 +29,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/products', label: 'Products', icon: Package },
+  { path: '/banner-products', label: 'Banner Products', icon: Flag },
   { path: '/categories', label: 'Categories', icon: Tags },
   { path: '/portfolio', label: 'Portfolio', icon: Image },
   { path: '/faq', label: 'FAQ', icon: HelpCircle },
