@@ -1,0 +1,282 @@
+---
+/**
+ * Category Product List Page
+ * /home/category/[id] — 카테고리별 제품 리스트
+ * HomeHeader 공통 컴포넌트 사용 (메뉴 + 히어로 동일)
+ */
+import Layout from '../../../layouts/Layout.astro';
+import HomeHeader from '../../../components/home/HomeHeader.astro';
+import { supabase } from '../../../lib/supabase';
+import { APP_VERSION } from '../../../version';
+
+const { id } = Astro.params;
+
+// --- Shared data for HomeHeader ---
+const FALLBACK_SERVICES = [
+  { icon: 'led', title: 'LED 채널 간판', desc: '고휘도 프리미엄 LED 채널 간판 제작·시공' },
+  { icon: 'neon', title: '네온 사인', desc: '감성 네온사인 맞춤 제작' },
+  { icon: 'banner', title: '현수막·배너', desc: '현수막, X배너, 롤업배너 제작' },
+  { icon: 'outdoor', title: '옥외 광고', desc: '빌딩·옥상 대형 간판 제작 설치' },
+  { icon: 'acrylic', title: '아크릴 간판', desc: '아크릴 스카시, 갈바 간판 제작' },
+  { icon: 'install', title: '설치·A/S', desc: '전국 시공 + 1년 무상 A/S' },
+];
+
+const FALLBACK_CONTACT = {
+  company: 'issac.design',
+  phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123',
+  email: 'contact@issac.design',
+};
+
+let services = FALLBACK_SERVICES;
+let contactInfo = FALLBACK_CONTACT;
+let categories: any[] = [];
+
+try {
+  const { data } = await supabase.from('service_items').select('*').eq('is_visible', true).order('order_index');
+  if (data?.length) services = data.map((s: any) => ({ icon: s.icon ?? 'led', title: s.title, desc: s.description }));
+} catch {}
+
+try {
+  const { data } = await supabase.from('product_categories').select('id, name, order_index').eq('is_visible', true).order('order_index');
+  if (data?.length) categories = data;
+} catch {}
+
+try {
+  const { data } = await supabase.from('site_config').select('key, value').eq('category', 'contact');
+  if (data?.length) {
+    const m: Record<string, string> = {};
+    data.forEach((c: any) => { m[c.key] = c.value; });
+    contactInfo = {
+      company: m.company_name || FALLBACK_CONTACT.company,
+      phone: m.phone || FALLBACK_CONTACT.phone,
+      hours: m.business_hours || FALLBACK_CONTACT.hours,
+      address: m.address || FALLBACK_CONTACT.address,
+      email: m.email || FALLBACK_CONTACT.email,
+    };
+  }
+} catch {}
+
+// Current category
+const current = categories.find(c => c.id === id);
+if (!current) return Astro.redirect('/home');
+
+// Fetch products for this category
+let products: any[] = [];
+try {
+  const { data } = await supabase.from('products').select('name, slug, price, thumbnail, description').eq('category_id', id).eq('is_visible', true).order('name');
+  if (data?.length) products = data;
+} catch {}
+
+// Subcategory mapping
+const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
+  'LED 채널 간판': [
+    { label: '전면발광 채널' }, { label: '측면발광 채널' }, { label: '전후면발광 채널' },
+    { label: '갈바 채널' }, { label: '스텐 채널' }, { label: '미니 채널' },
+  ],
+  '네온 사인': [
+    { label: 'LED 네온사인' }, { label: '실리콘 네온' }, { label: '아크릴 네온' }, { label: '맞춤 디자인 네온' },
+  ],
+  '아크릴 간판': [
+    { label: '아크릴 스카시' }, { label: '아크릴 박스' }, { label: '아크릴 절곡' }, { label: 'LED 아크릴' },
+  ],
+  '현수막/배너': [
+    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  ],
+  '현수막·배너': [
+    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  ],
+  '동출 간판': [
+    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
+  ],
+  '돌출 간판': [
+    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
+  ],
+  '옥상 간판': [
+    { label: '옥상 채널' }, { label: '옥상 네온' }, { label: '옥상 철구조물' }, { label: '대형 LED' },
+  ],
+  '옥외 광고': [
+    { label: '빌딩 간판' }, { label: '옥상 간판' }, { label: '지주 간판' }, { label: '대형 LED' },
+  ],
+};
+
+const megaMenuData = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
+}));
+
+const currentYear = new Date().getFullYear();
+
+export async function getStaticPaths() {
+  const { createClient } = await import('@supabase/supabase-js');
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const sb = createClient(url, key);
+  const { data } = await sb.from('product_categories').select('id').eq('is_visible', true);
+  return (data || []).map((c: any) => ({ params: { id: c.id } }));
+}
+---
+
+<Layout title={`${current.name} - issac.design`} description={`${current.name} 제품 목록 - issac.design 간판 전문`}>
+
+<style is:global>
+  /* ===== Category page content ===== */
+  .cp-breadcrumb {
+    padding: 16px 0;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 13px;
+    color: #999;
+    text-align: right;
+  }
+  .cp-breadcrumb a { color: #666; }
+  .cp-breadcrumb a:hover { color: #1A4D2E; text-decoration: underline; }
+  .cp-breadcrumb span { color: #222; font-weight: 600; }
+
+  .cp-header {
+    padding: 32px 0 24px;
+    border-bottom: 2px solid #222;
+  }
+  .cp-header h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #222;
+    letter-spacing: -0.02em;
+  }
+  .cp-header p {
+    font-size: 14px;
+    color: #999;
+    margin-top: 6px;
+  }
+
+  .cp-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    padding: 32px 0 64px;
+  }
+  .cp-card {
+    display: block;
+    transition: transform 0.15s;
+  }
+  .cp-card:hover { transform: translateY(-4px); }
+  .cp-card-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #f5f5f5;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .cp-card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .cp-card-price {
+    font-size: 16px;
+    font-weight: 800;
+    color: #e8590c;
+    white-space: nowrap;
+  }
+  .cp-card-desc {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+
+  .cp-empty {
+    text-align: center;
+    padding: 80px 0;
+    color: #999;
+  }
+  .cp-empty h2 { font-size: 1.2rem; color: #666; margin-bottom: 8px; }
+  .cp-empty a {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #1A4D2E;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 6px;
+  }
+
+  .cp-footer {
+    background: #1a1a1a;
+    color: #777;
+    padding: 32px 0;
+    font-size: 12px;
+    text-align: center;
+  }
+  .cp-footer a { color: #aaa; }
+
+  @media (max-width: 960px) {
+    .cp-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .cp-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  }
+  @media (max-width: 480px) {
+    .cp-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  }
+</style>
+
+<div class="hl">
+  <!-- Shared Header + Hero -->
+  <HomeHeader contactInfo={contactInfo} services={services} megaMenuData={megaMenuData} />
+
+  <!-- Breadcrumb -->
+  <div class="wrap">
+    <div class="cp-breadcrumb">
+      <a href="/home">HOME</a> &gt; <span>{current.name}</span>
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="wrap">
+    <div class="cp-header">
+      <h1>{current.name}</h1>
+      <p>{products.length}개의 제품</p>
+    </div>
+  </div>
+
+  <!-- Product Grid -->
+  <div class="wrap">
+    {products.length > 0 ? (
+      <div class="cp-grid">
+        {products.map((p) => (
+          <a href={`/shop/${p.slug}`} class="cp-card">
+            <img src={p.thumbnail} alt={p.name} class="cp-card-img" loading="lazy" />
+            <div class="cp-card-name">
+              <span>{p.name}</span>
+              <span class="cp-card-price">{p.price === '문의' ? '가격문의' : p.price}</span>
+            </div>
+            {p.description && <div class="cp-card-desc">{p.description.slice(0, 50)}</div>}
+          </a>
+        ))}
+      </div>
+    ) : (
+      <div class="cp-empty">
+        <h2>등록된 제품이 없습니다</h2>
+        <p>곧 새로운 제품이 추가될 예정입니다.</p>
+        <a href="/home#contact">문의하기</a>
+      </div>
+    )}
+  </div>
+
+  <!-- Footer -->
+  <footer class="cp-footer">
+    <div class="wrap">
+      <p>&copy; {currentYear} issac.design · 간판 전문 제작·시공 | <a href={`tel:${contactInfo.phone}`}>{contactInfo.phone}</a></p>
+    </div>
+  </footer>
+</div>
+
+</Layout>

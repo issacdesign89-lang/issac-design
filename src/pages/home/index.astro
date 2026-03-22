@@ -1,0 +1,470 @@
+---
+/**
+ * Home Light Version
+ * 배너공장.com 컨셉 — 가독성 최우선, 제품 명확 노출, B2B 신뢰감
+ * 메가메뉴: 메뉴 롤오버 시 카테고리 + 소분류 드롭다운
+ */
+import Layout from '../../layouts/Layout.astro';
+import HomeHeader from '../../components/home/HomeHeader.astro';
+import { supabase } from '../../lib/supabase';
+import { APP_VERSION } from '../../version';
+
+// --- Data ---
+const FALLBACK_SERVICES = [
+  { icon: 'led', title: 'LED 채널 간판', desc: '고휘도 프리미엄 LED 채널 간판 제작·시공' },
+  { icon: 'neon', title: '네온 사인', desc: '감성 네온사인 맞춤 제작' },
+  { icon: 'banner', title: '현수막·배너', desc: '현수막, X배너, 롤업배너 제작' },
+  { icon: 'outdoor', title: '옥외 광고', desc: '빌딩·옥상 대형 간판 제작 설치' },
+  { icon: 'acrylic', title: '아크릴 간판', desc: '아크릴 스카시, 갈바 간판 제작' },
+  { icon: 'install', title: '설치·A/S', desc: '전국 시공 + 1년 무상 A/S' },
+];
+
+const FALLBACK_CONTACT = {
+  company: 'issac.design',
+  phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123',
+  email: 'contact@issac.design',
+};
+
+let services = FALLBACK_SERVICES;
+let contactInfo = FALLBACK_CONTACT;
+let products: any[] = [];
+let portfolio: any[] = [];
+let categories: any[] = [];
+
+try {
+  const { data } = await supabase.from('service_items').select('*').eq('is_visible', true).order('order_index');
+  if (data?.length) services = data.map((s: any) => ({ icon: s.icon ?? 'led', title: s.title, desc: s.description }));
+} catch {}
+
+try {
+  const { data: catData } = await supabase.from('product_categories').select('id, name, order_index').eq('is_visible', true).order('order_index');
+  if (catData?.length) categories = catData;
+} catch {}
+
+try {
+  const { data } = await supabase.from('products').select('name, slug, price, thumbnail, category_id').eq('is_visible', true).order('popularity', { ascending: false }).limit(8);
+  if (data?.length) products = data;
+} catch {}
+
+try {
+  const { data } = await supabase.from('portfolio_items').select('*').eq('is_visible', true).order('order_index').limit(6);
+  if (data?.length) portfolio = data.map((p: any) => ({ title: p.title, desc: p.description, category: p.category, image: p.image_after }));
+} catch {}
+
+try {
+  const { data } = await supabase.from('site_config').select('key, value').eq('category', 'contact');
+  if (data?.length) {
+    const m: Record<string, string> = {};
+    data.forEach((c: any) => { m[c.key] = c.value; });
+    contactInfo = {
+      company: m.company_name || FALLBACK_CONTACT.company,
+      phone: m.phone || FALLBACK_CONTACT.phone,
+      hours: m.business_hours || FALLBACK_CONTACT.hours,
+      address: m.address || FALLBACK_CONTACT.address,
+      email: m.email || FALLBACK_CONTACT.email,
+    };
+  }
+} catch {}
+
+const currentYear = new Date().getFullYear();
+
+// Subcategory mapping
+const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
+  'LED 채널 간판': [
+    { label: '전면발광 채널' }, { label: '측면발광 채널' }, { label: '전후면발광 채널' },
+    { label: '갈바 채널' }, { label: '스텐 채널' }, { label: '미니 채널' },
+  ],
+  '네온 사인': [
+    { label: 'LED 네온사인' }, { label: '실리콘 네온' }, { label: '아크릴 네온' }, { label: '맞춤 디자인 네온' },
+  ],
+  '아크릴 간판': [
+    { label: '아크릴 스카시' }, { label: '아크릴 박스' }, { label: '아크릴 절곡' }, { label: 'LED 아크릴' },
+  ],
+  '현수막/배너': [
+    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  ],
+  '현수막·배너': [
+    { label: '현수막' }, { label: 'X배너' }, { label: '롤업배너' }, { label: '거치대배너' }, { label: '실사출력' },
+  ],
+  '동출 간판': [
+    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
+  ],
+  '돌출 간판': [
+    { label: '원형 돌출' }, { label: '사각 돌출' }, { label: '양면 돌출' }, { label: 'LED 돌출' },
+  ],
+  '옥상 간판': [
+    { label: '옥상 채널' }, { label: '옥상 네온' }, { label: '옥상 철구조물' }, { label: '대형 LED' },
+  ],
+  '옥외 광고': [
+    { label: '빌딩 간판' }, { label: '옥상 간판' }, { label: '지주 간판' }, { label: '대형 LED' },
+  ],
+};
+
+const megaMenuData = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
+}));
+---
+
+<Layout title="issac.design - 간판 전문 제작" description="LED 간판, 네온사인, 현수막, 옥외광고 전문 제작·시공. 15년 경력, 전국 시공, 1년 무상 A/S.">
+
+<style is:global>
+  /* ===== Section Common ===== */
+  .section { padding: 64px 0; }
+  .section-alt { background: #f5f5f5; }
+  .section-header { margin-bottom: 36px; }
+  .section-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #222;
+    margin-bottom: 8px;
+  }
+  .section-header h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 22px;
+    background: #1A4D2E;
+    border-radius: 2px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .section-header p { font-size: 14px; color: #999; margin-left: 14px; }
+
+  /* ===== Products Grid ===== */
+  .products-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .product-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+    overflow: hidden; transition: box-shadow 0.15s;
+  }
+  .product-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .product-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #f5f5f5; }
+  .product-info { padding: 14px; }
+  .product-name { font-size: 14px; font-weight: 700; color: #222; margin-bottom: 6px; line-height: 1.4; }
+  .product-price { font-size: 16px; font-weight: 800; color: #e8590c; }
+  .product-price-sub { font-size: 12px; color: #999; font-weight: 400; }
+  .product-tags { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .product-tag { font-size: 11px; padding: 2px 8px; background: #f5f5f5; border-radius: 3px; color: #999; font-weight: 500; }
+
+  /* ===== Services Grid ===== */
+  .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .svc-card {
+    display: flex; align-items: flex-start; gap: 14px; padding: 20px;
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; transition: border-color 0.15s;
+  }
+  .svc-card:hover { border-color: #1A4D2E; }
+  .svc-icon {
+    width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: #edf5f0; color: #1A4D2E; border-radius: 6px;
+  }
+  .svc-icon svg { width: 20px; height: 20px; }
+  .svc-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .svc-card p { font-size: 13px; color: #555; line-height: 1.5; }
+
+  /* ===== Portfolio ===== */
+  .port-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .port-card {
+    border-radius: 6px; overflow: hidden; border: 1px solid #e0e0e0;
+    background: #fff; transition: box-shadow 0.15s;
+  }
+  .port-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .port-card img { width: 100%; height: 180px; object-fit: cover; }
+  .port-body { padding: 14px; }
+  .port-cat { font-size: 11px; font-weight: 700; color: #1A4D2E; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .port-body h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .port-body p { font-size: 13px; color: #555; }
+
+  /* ===== CTA Banner ===== */
+  .cta-banner { background: #1A4D2E; color: #fff; padding: 48px 0; text-align: center; }
+  .cta-banner h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+  .cta-banner p { font-size: 14px; opacity: 0.85; margin-bottom: 24px; }
+  .cta-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-cta {
+    display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px;
+    font-size: 14px; font-weight: 700; border-radius: 6px; border: none; cursor: pointer;
+  }
+  .btn-cta-white { background: #fff; color: #1A4D2E !important; }
+  .btn-cta-white:hover { background: #f0f0f0; }
+  .btn-cta-white svg { stroke: #1A4D2E; }
+  .btn-cta-outline { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.5); }
+  .btn-cta-outline:hover { border-color: #fff; }
+
+  /* ===== Contact ===== */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .contact-info { display: flex; flex-direction: column; gap: 20px; }
+  .ci-item { display: flex; gap: 12px; align-items: flex-start; }
+  .ci-icon {
+    width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: #edf5f0; color: #1A4D2E; border-radius: 6px;
+  }
+  .ci-icon svg { width: 16px; height: 16px; }
+  .ci-label { font-size: 12px; color: #999; margin-bottom: 1px; }
+  .ci-value { font-size: 14px; font-weight: 600; }
+  .contact-form { display: flex; flex-direction: column; gap: 12px; }
+  .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cf-group label { display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px; }
+  .cf-group input, .cf-group textarea {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    border: 1px solid #e0e0e0; border-radius: 6px; background: #f5f5f5; color: #222;
+    outline: none; transition: border-color 0.15s; box-sizing: border-box;
+  }
+  .cf-group input:focus, .cf-group textarea:focus { border-color: #1A4D2E; }
+  .cf-group textarea { resize: vertical; min-height: 100px; }
+  .btn-submit {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 700;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: #1A4D2E; color: #fff; border: none; border-radius: 6px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-submit:hover { background: #154025; }
+
+  /* ===== Footer ===== */
+  .footer { background: #1a1a1a; color: #999; padding: 40px 0 24px; font-size: 13px; }
+  .footer-grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px;
+    margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #333;
+  }
+  .footer-brand h3 { color: #fff; font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+  .footer-brand p { color: #777; font-size: 12px; line-height: 1.7; }
+  .footer-col h4 { color: #ccc; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .footer-col ul { list-style: none; }
+  .footer-col li { margin-bottom: 6px; }
+  .footer-col a { color: #777; font-size: 12px; transition: color 0.15s; }
+  .footer-col a:hover { color: #fff; }
+  .footer-bottom { display: flex; justify-content: space-between; color: #555; font-size: 11px; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 960px) {
+    .products-grid { grid-template-columns: repeat(3, 1fr); }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    .products-grid { grid-template-columns: repeat(2, 1fr); }
+    .services-grid { grid-template-columns: 1fr; }
+    .port-grid { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .cf-row { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; }
+    .footer-bottom { flex-direction: column; gap: 4px; text-align: center; }
+  }
+</style>
+
+<div class="hl">
+  <HomeHeader contactInfo={contactInfo} services={services} megaMenuData={megaMenuData} />
+
+  <!-- Products -->
+  <section class="section" id="products">
+    <div class="wrap">
+      <div class="section-header">
+        <h2>인기 제품</h2>
+        <p>가장 많이 찾는 간판 제품을 만나보세요</p>
+      </div>
+      {products.length > 0 ? (
+        <div class="products-grid">
+          {products.map((p) => (
+            <a href={`/shop/${p.slug}`} class="product-card">
+              <img src={p.thumbnail} alt={p.name} class="product-thumb" loading="lazy" />
+              <div class="product-info">
+                <div class="product-name">{p.name}</div>
+                <div class="product-price">
+                  {p.price === '문의' ? '가격 문의' : p.price}
+                  {p.price !== '문의' && <span class="product-price-sub"> ~</span>}
+                </div>
+                <div class="product-tags">
+                  <span class="product-tag">무료 시안</span>
+                  <span class="product-tag">전국 시공</span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p style="text-align:center;color:#999;padding:40px 0;">제품을 준비 중입니다.</p>
+      )}
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="section section-alt" id="services">
+    <div class="wrap">
+      <div class="section-header">
+        <h2>제작 서비스</h2>
+        <p>기획부터 시공까지 원스톱으로 제공합니다</p>
+      </div>
+      <div class="services-grid">
+        {services.map((s) => (
+          <div class="svc-card">
+            <div class="svc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/>
+              </svg>
+            </div>
+            <div>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Portfolio -->
+  {portfolio.length > 0 && (
+    <section class="section" id="portfolio">
+      <div class="wrap">
+        <div class="section-header">
+          <h2>시공 사례</h2>
+          <p>다양한 업종의 고객사와 함께한 프로젝트</p>
+        </div>
+        <div class="port-grid">
+          {portfolio.map((p) => (
+            <div class="port-card">
+              <img src={p.image} alt={p.title} loading="lazy" />
+              <div class="port-body">
+                <div class="port-cat">{p.category}</div>
+                <h3>{p.title}</h3>
+                <p>{p.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA Banner -->
+  <section class="cta-banner">
+    <div class="wrap">
+      <h2>간판 제작, 어디서부터 시작해야 할지 모르겠다면?</h2>
+      <p>전문 상담사가 업종·예산에 맞는 최적의 간판을 추천해드립니다. 무료 상담 받아보세요.</p>
+      <div class="cta-buttons">
+        <a href={"tel:" + contactInfo.phone} class="btn-cta btn-cta-white">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          전화 상담
+        </a>
+        <a href="#contact" class="btn-cta btn-cta-outline">온라인 문의</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section section-alt" id="contact">
+    <div class="wrap">
+      <div class="section-header">
+        <h2>문의하기</h2>
+        <p>무료 상담 및 견적을 요청하세요</p>
+      </div>
+      <div class="contact-grid">
+        <div class="contact-info">
+          <div class="ci-item">
+            <div class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></div>
+            <div><div class="ci-label">전화</div><div class="ci-value">{contactInfo.phone}</div></div>
+          </div>
+          <div class="ci-item">
+            <div class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div><div class="ci-label">영업시간</div><div class="ci-value">{contactInfo.hours}</div></div>
+          </div>
+          <div class="ci-item">
+            <div class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+            <div><div class="ci-label">주소</div><div class="ci-value">{contactInfo.address}</div></div>
+          </div>
+          <div class="ci-item">
+            <div class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
+            <div><div class="ci-label">이메일</div><div class="ci-value">{contactInfo.email}</div></div>
+          </div>
+        </div>
+        <form class="contact-form" id="contact-form">
+          <div class="cf-row">
+            <div class="cf-group"><label>이름</label><input type="text" name="name" placeholder="홍길동" required /></div>
+            <div class="cf-group"><label>연락처</label><input type="tel" name="phone" placeholder="010-0000-0000" required /></div>
+          </div>
+          <div class="cf-group"><label>이메일</label><input type="email" name="email" placeholder="email@example.com" /></div>
+          <div class="cf-group"><label>문의 내용</label><textarea name="message" placeholder="제작하실 간판 종류, 크기, 설치 장소 등을 알려주세요." required></textarea></div>
+          <button type="submit" class="btn-submit">무료 견적 요청하기</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>issac.design</h3>
+          <p>간판 전문 제작·시공 업체<br/>LED 채널간판 · 네온사인 · 현수막 · 옥외광고<br/>디자인부터 설치까지 원스톱 서비스</p>
+        </div>
+        <div class="footer-col">
+          <h4>바로가기</h4>
+          <ul>
+            <li><a href="/home">홈</a></li>
+            <li><a href="/shop">쇼핑몰</a></li>
+            <li><a href="#portfolio">시공사례</a></li>
+            <li><a href="#contact">문의하기</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>서비스</h4>
+          <ul>
+            <li><a href="/shop">LED 채널간판</a></li>
+            <li><a href="/shop">네온사인</a></li>
+            <li><a href="/shop">현수막·배너</a></li>
+            <li><a href="/simulator">3D 시뮬레이터</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>고객지원</h4>
+          <ul>
+            <li><a href={"tel:" + contactInfo.phone}>{contactInfo.phone}</a></li>
+            <li><a href={"mailto:" + contactInfo.email}>{contactInfo.email}</a></li>
+            <li><a href="/privacy">개인정보처리방침</a></li>
+            <li><a href="/terms">이용약관</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; {currentYear} issac.design All rights reserved.</span>
+        <span>v{APP_VERSION}</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // === Contact Form ===
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const data = {
+      name: fd.get('name'),
+      phone: fd.get('phone'),
+      email: fd.get('email'),
+      message: fd.get('message'),
+      source: 'home-light',
+    };
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        alert('문의가 접수되었습니다. 빠른 시일 내에 연락드리겠습니다.');
+        form.reset();
+      } else {
+        alert('전송에 실패했습니다. 전화로 문의해주세요.');
+      }
+    } catch {
+      alert('전송에 실패했습니다. 전화로 문의해주세요.');
+    }
+  });
+</script>
+
+</Layout>

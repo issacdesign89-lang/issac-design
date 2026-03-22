@@ -1,0 +1,863 @@
+---
+/**
+ * HomeHeader — 공통 헤더 + 히어로 컴포넌트
+ * /home 및 /home/category/[id] 등 서브페이지에서 공유
+ */
+interface SubItem {
+  label: string;
+  href?: string;
+}
+interface MegaMenuCategory {
+  id: string;
+  name: string;
+  subcategories: SubItem[];
+}
+interface ServiceItem {
+  icon: string;
+  title: string;
+  desc: string;
+}
+interface ContactInfo {
+  company: string;
+  phone: string;
+  hours: string;
+  address: string;
+  email: string;
+}
+
+interface Props {
+  contactInfo: ContactInfo;
+  services: ServiceItem[];
+  megaMenuData: MegaMenuCategory[];
+}
+
+const { contactInfo, services, megaMenuData } = Astro.props;
+---
+
+<style is:global>
+  /* Override global dark theme for /home */
+  body:has(.hl) {
+    background: #ffffff !important;
+    color: #222 !important;
+  }
+  body:has(.hl) .skip-to-content { display: none; }
+  body:has(.hl) main,
+  body:has(.hl) nav,
+  body:has(.hl) footer,
+  body:has(.hl) header {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .hl {
+    --bg: #ffffff;
+    --bg-alt: #f5f5f5;
+    --bg-dark: #1a1a1a;
+    --text: #222;
+    --text-sub: #555;
+    --text-muted: #999;
+    --accent: #1A4D2E;
+    --accent-bg: #edf5f0;
+    --accent-hover: #154025;
+    --orange: #e8590c;
+    --orange-bg: #fff4ee;
+    --border: #e0e0e0;
+    --radius: 6px;
+    --max-w: 1140px;
+    --font: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: #222;
+    background: #ffffff;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+  }
+
+  .hl *, .hl *::before, .hl *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .hl a { color: inherit; text-decoration: none; }
+  .hl img { display: block; max-width: 100%; }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+
+  /* ===== Top Bar ===== */
+  .top-bar {
+    background: #1a1a1a;
+    color: #aaa;
+    font-size: 12px;
+    padding: 6px 0;
+  }
+  .top-bar .wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .top-bar a { color: #ccc; }
+  .top-bar a:hover { color: #fff; }
+  .top-bar-right { display: flex; gap: 16px; }
+
+  /* ===== Header ===== */
+  .header {
+    background: #fff;
+    border-bottom: 2px solid #1A4D2E;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header .wrap {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+  }
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1A4D2E;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    flex-shrink: 0;
+  }
+  .logo span { color: #222; font-weight: 400; font-size: 0.75rem; margin-left: 8px; letter-spacing: 0; }
+
+  /* ===== Main Navigation ===== */
+  .main-nav {
+    display: flex;
+    align-items: stretch;
+    margin-left: 40px;
+    flex: 1;
+  }
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+  }
+  .nav-item > a,
+  .nav-item > .nav-trigger {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 20px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    border: none;
+    background: none;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .nav-item > a:hover,
+  .nav-item > .nav-trigger:hover,
+  .nav-item.active > a,
+  .nav-item.active > .nav-trigger {
+    color: #1A4D2E;
+    background: #f0f8f3;
+  }
+  .nav-arrow {
+    width: 10px;
+    height: 10px;
+    transition: transform 0.2s;
+  }
+  .nav-item.active .nav-arrow {
+    transform: rotate(180deg);
+  }
+
+  /* Header right */
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 8px 0;
+  }
+  .btn-shop {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .btn-shop:hover { background: #f5f5f5; }
+  .btn-quote {
+    background: #1A4D2E;
+    color: #fff !important;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+    transition: background 0.15s;
+  }
+  .btn-quote:hover { background: #154025; }
+
+  /* ===== Simple Dropdown ===== */
+  .simple-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-top: 2px solid #1A4D2E;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    z-index: 201;
+    padding: 8px 0;
+  }
+  .nav-item.active .simple-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .simple-dropdown a {
+    display: block;
+    padding: 9px 20px;
+    font-size: 14px;
+    color: #444;
+    transition: background 0.1s, color 0.1s;
+  }
+  .simple-dropdown a:hover {
+    background: #f0f8f3;
+    color: #1A4D2E;
+  }
+
+  /* ===== Mega Menu ===== */
+  .mega-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.15);
+    z-index: 198;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s, visibility 0.25s;
+  }
+  .mega-overlay.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .mega-dropdown {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    background: #fff;
+    border-top: 2px solid #1A4D2E;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+    transition: opacity 0.25s, visibility 0.25s, transform 0.25s;
+    z-index: 199;
+    top: 0;
+  }
+  .mega-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .mega-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 28px 20px 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 32px;
+  }
+
+  /* Mega menu: category column */
+  .mega-col {
+    min-width: 0;
+  }
+  .mega-col-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1A4D2E;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #1A4D2E;
+    display: block;
+    transition: color 0.15s;
+  }
+  .mega-col-title:hover {
+    color: #154025;
+  }
+  .mega-sub-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .mega-sub-list li {
+    margin-bottom: 2px;
+  }
+  .mega-sub-list li a {
+    display: block;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #555;
+    transition: color 0.15s, padding-left 0.15s;
+  }
+  .mega-sub-list li a:hover {
+    color: #1A4D2E;
+    padding-left: 6px;
+  }
+  .mega-col-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1A4D2E;
+    transition: gap 0.15s;
+  }
+  .mega-col-more:hover {
+    gap: 8px;
+    text-decoration: underline;
+  }
+
+  /* Mega panel visibility (for "전체") */
+  .mega-panel { display: none; }
+  .mega-panel.active { display: block; }
+
+  /* ===== Category Inline Dropdown ===== */
+  .cat-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-top: 2px solid #1A4D2E;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    z-index: 201;
+    padding: 12px 0;
+  }
+  .nav-cat-item.active .cat-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .cat-dropdown-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .cat-dropdown-list li a {
+    display: block;
+    padding: 8px 20px;
+    font-size: 14px;
+    color: #444;
+    transition: background 0.1s, color 0.1s, padding-left 0.15s;
+  }
+  .cat-dropdown-list li a:hover {
+    background: #f0f8f3;
+    color: #1A4D2E;
+    padding-left: 24px;
+  }
+  .cat-dropdown-more {
+    display: block;
+    padding: 8px 20px 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1A4D2E;
+    border-top: 1px solid #eee;
+    margin-top: 4px;
+  }
+  .cat-dropdown-more:hover {
+    text-decoration: underline;
+  }
+
+  /* ===== Mobile Menu Toggle ===== */
+  .mobile-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #222;
+    margin-left: auto;
+  }
+  .mobile-toggle svg { width: 24px; height: 24px; }
+
+  /* ===== Hero Slider ===== */
+  .hero-slider {
+    position: relative;
+    overflow: hidden;
+    height: 420px;
+  }
+  .hero-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .hero-slide.active { opacity: 1; z-index: 1; }
+  .hero-slide-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .hero-slide-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(26,77,46,0.88) 0%, rgba(26,77,46,0.6) 100%);
+  }
+  .hero-slide-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 20px;
+    color: #fff;
+  }
+  .hero-slide-text { flex: 1; }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .hero-slide-text h2 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 14px;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+  .hero-slide-text p {
+    font-size: 1.05rem;
+    opacity: 0.9;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    max-width: 460px;
+  }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 13px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-hero:active { transform: scale(0.98); }
+  .btn-hero-primary { background: #1A4D2E; color: #fff; }
+  .btn-hero-primary:hover { background: #154025; }
+  .btn-hero-outline { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.5); }
+  .btn-hero-outline:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-shrink: 0;
+  }
+  .stat-item { text-align: center; color: #fff; }
+  .stat-num {
+    font-size: 2.4rem;
+    font-weight: 800;
+    display: block;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.75;
+    margin-top: 4px;
+  }
+
+  .hero-dots {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+  }
+  .hero-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    padding: 0;
+  }
+  .hero-dot.active {
+    background: #fff;
+    transform: scale(1.2);
+  }
+
+
+  @media (max-width: 768px) {
+    .hero-slider { height: 360px; }
+    .hero-slide-content { flex-direction: column; text-align: center; justify-content: center; }
+    .hero-stats { justify-content: center; gap: 20px; }
+    .hero-actions { justify-content: center; }
+    .top-bar { display: none; }
+
+    .main-nav { display: none; }
+    .header-right .btn-shop { display: none; }
+    .mobile-toggle { display: flex; }
+
+    .mega-dropdown {
+      width: 100% !important;
+      position: fixed !important;
+    }
+    .mega-dropdown .mega-inner {
+      grid-template-columns: repeat(2, 1fr) !important;
+      padding: 16px 20px !important;
+      gap: 16px !important;
+    }
+
+    .main-nav.mobile-open {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-bottom: 2px solid #1A4D2E;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      z-index: 300;
+    }
+    .main-nav.mobile-open .nav-item {
+      flex-direction: column;
+    }
+    .main-nav.mobile-open .nav-item > a,
+    .main-nav.mobile-open .nav-item > .nav-trigger {
+      padding: 14px 20px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .main-nav.mobile-open .simple-dropdown {
+      position: relative;
+      top: 0;
+      box-shadow: none;
+      border: none;
+      border-top: 1px solid #eee;
+    }
+  }
+</style>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="wrap">
+    <span>간판 전문 제작·시공 | 전국 배송·설치</span>
+    <div class="top-bar-right">
+      <a href={"tel:" + contactInfo.phone}>{contactInfo.phone}</a>
+      <span>{contactInfo.hours}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Header with Mega Menu -->
+<header class="header" id="site-header">
+  <div class="wrap">
+    <a href="/home" class="logo">issac.design <span>간판 전문</span></a>
+
+    <nav class="main-nav" id="main-nav">
+      <!-- 전체 (Mega Menu - 모든 카테고리 표시) -->
+      <div class="nav-item nav-cat-item" data-menu="all" data-cat-filter="all">
+        <button class="nav-trigger">
+          전체
+          <svg class="nav-arrow" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+        </button>
+      </div>
+
+      <!-- 각 카테고리 메뉴 (소분류 드롭다운 내장) -->
+      {megaMenuData.map((cat) => (
+        <div class="nav-item nav-cat-item" data-menu={cat.id} data-cat-filter={cat.id}>
+          <a href={`/home/category/${cat.id}`} class="nav-trigger nav-cat-link">
+            {cat.name}
+            <svg class="nav-arrow" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+          </a>
+          <div class="cat-dropdown">
+            <ul class="cat-dropdown-list">
+              {cat.subcategories.map((sub) => (
+                <li><a href={sub.href || `/home/category/${cat.id}`}>{sub.label}</a></li>
+              ))}
+            </ul>
+            <a href={`/home/category/${cat.id}`} class="cat-dropdown-more">전체보기 &rarr;</a>
+          </div>
+        </div>
+      ))}
+    </nav>
+
+    <div class="header-right">
+      <a href="/home#contact" class="btn-quote">견적 문의</a>
+      <button class="mobile-toggle" id="mobile-toggle" aria-label="메뉴">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mega Menu Dropdown (outside header for proper positioning) -->
+<div class="mega-dropdown" id="mega-dropdown">
+  <!-- 전체 패널: 모든 카테고리 표시 -->
+  <div class="mega-panel" data-panel="all">
+    <div class="mega-inner">
+      {megaMenuData.map((cat) => (
+        <div class="mega-col">
+          <a href={`/home/category/${cat.id}`} class="mega-col-title">{cat.name}</a>
+          <ul class="mega-sub-list">
+            {cat.subcategories.map((sub) => (
+              <li><a href={sub.href || `/home/category/${cat.id}`}>{sub.label}</a></li>
+            ))}
+          </ul>
+          <a href={`/home/category/${cat.id}`} class="mega-col-more">전체보기 &rarr;</a>
+        </div>
+      ))}
+    </div>
+  </div>
+
+</div>
+
+<!-- Mega Menu Overlay -->
+<div class="mega-overlay" id="mega-overlay"></div>
+
+<!-- Hero Slider -->
+<section class="hero-slider" id="hero-slider">
+  <div class="hero-slide active" data-slide="0">
+    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1763673263764-4d189ab2f03f?w=1400&q=80')"></div>
+    <div class="hero-slide-overlay"></div>
+    <div class="hero-slide-content">
+      <div class="hero-slide-text">
+        <div class="hero-badge">SINCE 2010 · 15년 전문 제작</div>
+        <h2>간판 제작부터 시공까지<br/>원스톱 전문 업체</h2>
+        <p>LED 채널 간판, 네온사인, 현수막, 옥외광고까지.<br/>디자인·제작·설치를 한번에 해결하세요.</p>
+        <div class="hero-actions">
+          <a href="/shop" class="btn-hero btn-hero-primary">쇼핑몰 바로가기</a>
+          <a href="/home#contact" class="btn-hero btn-hero-outline">무료 견적 신청</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><span class="stat-num">15+</span><span class="stat-label">년 경력</span></div>
+        <div class="stat-item"><span class="stat-num">3,200+</span><span class="stat-label">시공 실적</span></div>
+        <div class="stat-item"><span class="stat-num">98%</span><span class="stat-label">고객 만족</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-slide" data-slide="1">
+    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1551560798-b935eb510ab3?w=1400&q=80')"></div>
+    <div class="hero-slide-overlay" style="background:linear-gradient(135deg, rgba(45,25,10,0.85) 0%, rgba(45,25,10,0.5) 100%)"></div>
+    <div class="hero-slide-content">
+      <div class="hero-slide-text">
+        <div class="hero-badge">NEON SIGN · 맞춤 제작</div>
+        <h2>감성을 담은<br/>네온사인 제작</h2>
+        <p>카페, 레스토랑, 매장에 딱 맞는 맞춤형 네온사인.<br/>20가지 컬러, 자유로운 디자인.</p>
+        <div class="hero-actions">
+          <a href="/shop" class="btn-hero btn-hero-primary">네온사인 보기</a>
+          <a href="/home#contact" class="btn-hero btn-hero-outline">견적 문의</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><span class="stat-num">20+</span><span class="stat-label">컬러</span></div>
+        <div class="stat-item"><span class="stat-num">5일</span><span class="stat-label">제작기간</span></div>
+        <div class="stat-item"><span class="stat-num">100%</span><span class="stat-label">맞춤제작</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-slide" data-slide="2">
+    <div class="hero-slide-bg" style="background-image:url('https://images.unsplash.com/photo-1646119843923-7cc001121d5d?w=1400&q=80')"></div>
+    <div class="hero-slide-overlay" style="background:linear-gradient(135deg, rgba(10,30,60,0.85) 0%, rgba(10,30,60,0.5) 100%)"></div>
+    <div class="hero-slide-content">
+      <div class="hero-slide-text">
+        <div class="hero-badge">LED CHANNEL · 프리미엄</div>
+        <h2>빛으로 만드는<br/>브랜드 아이덴티티</h2>
+        <p>고휘도 LED 채널 간판으로 낮과 밤 모두 빛나는 브랜드.<br/>프리미엄 소재, 5년 보증.</p>
+        <div class="hero-actions">
+          <a href="/shop" class="btn-hero btn-hero-primary">LED 간판 보기</a>
+          <a href="/home#contact" class="btn-hero btn-hero-outline">무료 시안 요청</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><span class="stat-num">5년</span><span class="stat-label">보증</span></div>
+        <div class="stat-item"><span class="stat-num">전국</span><span class="stat-label">시공</span></div>
+        <div class="stat-item"><span class="stat-num">1년</span><span class="stat-label">무상 A/S</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-dots">
+    <button class="hero-dot active" data-dot="0"></button>
+    <button class="hero-dot" data-dot="1"></button>
+    <button class="hero-dot" data-dot="2"></button>
+  </div>
+</section>
+
+<script>
+  // === Hero Slider ===
+  const slides = document.querySelectorAll<HTMLElement>('.hero-slide');
+  const dots = document.querySelectorAll<HTMLElement>('.hero-dot');
+  const INTERVAL = 5000;
+  let current = 0;
+  let timer: ReturnType<typeof setInterval>;
+
+  function goTo(idx: number) {
+    slides.forEach(s => s.classList.remove('active'));
+    dots.forEach(d => d.classList.remove('active'));
+    slides[idx]?.classList.add('active');
+    dots[idx]?.classList.add('active');
+    current = idx;
+  }
+
+  function next() {
+    goTo((current + 1) % slides.length);
+  }
+
+  function startAuto() {
+    clearInterval(timer);
+    timer = setInterval(next, INTERVAL);
+  }
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      goTo(Number(dot.dataset.dot));
+      startAuto();
+    });
+  });
+
+  startAuto();
+
+  // === Category Menu ===
+  const overlay = document.getElementById('mega-overlay');
+  const megaDropdown = document.getElementById('mega-dropdown');
+  const siteHeader = document.getElementById('site-header');
+  const catNavItems = document.querySelectorAll<HTMLElement>('.nav-cat-item');
+  const megaPanels = document.querySelectorAll<HTMLElement>('.mega-panel');
+  const navAll = document.querySelector<HTMLElement>('.nav-cat-item[data-cat-filter="all"]');
+  let activeNavItem: HTMLElement | null = null;
+  let closeTimer: ReturnType<typeof setTimeout> | null = null;
+  let isMegaOpen = false;
+
+  function positionMegaDropdown() {
+    if (siteHeader && megaDropdown) {
+      const rect = siteHeader.getBoundingClientRect();
+      megaDropdown.style.top = rect.bottom + 'px';
+    }
+  }
+
+  function closeAll() {
+    megaDropdown?.classList.remove('open');
+    overlay?.classList.remove('show');
+    megaPanels.forEach(p => p.classList.remove('active'));
+    catNavItems.forEach(n => n.classList.remove('active'));
+    activeNavItem = null;
+    isMegaOpen = false;
+  }
+
+  function openAllMega() {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+    closeAll();
+    megaPanels.forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === 'all');
+    });
+    positionMegaDropdown();
+    megaDropdown?.classList.add('open');
+    overlay?.classList.add('show');
+    navAll?.classList.add('active');
+    activeNavItem = navAll ?? null;
+    isMegaOpen = true;
+  }
+
+  function openCatDropdown(navItem: HTMLElement) {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+    // Close mega if open
+    megaDropdown?.classList.remove('open');
+    overlay?.classList.remove('show');
+    megaPanels.forEach(p => p.classList.remove('active'));
+    isMegaOpen = false;
+    // Deactivate previous
+    if (activeNavItem && activeNavItem !== navItem) {
+      activeNavItem.classList.remove('active');
+    }
+    navItem.classList.add('active');
+    activeNavItem = navItem;
+  }
+
+  function scheduleClose() {
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => closeAll(), 200);
+  }
+
+  function cancelClose() {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+  }
+
+  catNavItems.forEach(navItem => {
+    const isAll = navItem.dataset.catFilter === 'all';
+
+    navItem.addEventListener('mouseenter', () => {
+      if (isAll) openAllMega();
+      else openCatDropdown(navItem);
+    });
+    navItem.addEventListener('mouseleave', () => scheduleClose());
+  });
+
+  // Keep mega open when hovering dropdown
+  megaDropdown?.addEventListener('mouseenter', () => cancelClose());
+  megaDropdown?.addEventListener('mouseleave', () => scheduleClose());
+
+  overlay?.addEventListener('click', closeAll);
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as Node;
+    if (!siteHeader?.contains(target) && !megaDropdown?.contains(target)) {
+      closeAll();
+    }
+  });
+
+  window.addEventListener('scroll', () => {
+    if (isMegaOpen) positionMegaDropdown();
+  }, { passive: true });
+
+  // === Mobile Menu Toggle ===
+  const mobileToggle = document.getElementById('mobile-toggle');
+  const mainNav = document.getElementById('main-nav');
+
+  mobileToggle?.addEventListener('click', () => {
+    mainNav?.classList.toggle('mobile-open');
+  });
+
+  mainNav?.querySelectorAll('a:not(.nav-trigger)').forEach(link => {
+    link.addEventListener('click', () => {
+      mainNav?.classList.remove('mobile-open');
+    });
+  });
+</script>
