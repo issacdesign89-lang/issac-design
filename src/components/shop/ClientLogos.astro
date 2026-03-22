@@ -1,0 +1,372 @@
+---
+/**
+ * ClientLogos Component
+ * Marquee scroll of client/business type logos
+ * Pure CSS infinite scroll - no JavaScript
+ */
+import { Image } from 'astro:assets';
+import { supabase } from '../../lib/supabase';
+
+const FALLBACK_LOGOS = [
+  {
+    name: "맛있는 레스토랑",
+    type: "Restaurant",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M8 5v8a4 4 0 0 0 8 0V5"/><path d="M12 19v16"/><path d="M28 5c0 0 0 6-1 10s-1 9-1 9"/><path d="M28 5c0 0 2 6 2 10s-1 9-1 9"/><path d="M28 24v11"/></svg>`,
+  },
+  {
+    name: "모던 카페",
+    type: "Cafe",
+    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h22v10a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V14z"/><path d="M28 17h2a4 4 0 0 1 0 8h-2"/><path d="M10 34h14"/><path d="M12 6c0 0 2 2 2 4"/><path d="M17 4c0 0 2 2 2 4"/><path d="M22 6c0 0 2 2 2 4"/></svg>`,
+  },
+  {
+    name: "트렌드 매장",
+    type: "Retail Store",
+    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l2-5h24l2 5"/><path d="M6 10v24h28V10"/><path d="M6 10h28"/><rect x="15" y="22" width="10" height="12"/><path d="M10 10v4a4 4 0 0 0 4 4 4 4 0 0 0 4-4v-4"/><path d="M18 10v4a4 4 0 0 0 4 4 4 4 0 0 0 4-4v-4"/></svg>`,
+  },
+  {
+    name: "프리미엄 오피스",
+    type: "Office",
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="24" height="28" rx="1"/><path d="M14 12h4"/><path d="M14 18h4"/><path d="M14 24h4"/><path d="M22 12h4"/><path d="M22 18h4"/><path d="M22 24h4"/><rect x="15" y="28" width="10" height="6"/></svg>`,
+  },
+  {
+    name: "뷰티 살롱",
+    type: "Beauty Salon",
+    image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="14" r="6"/><path d="M12 28c0-4.4 3.6-8 8-8s8 3.6 8 8"/><path d="M26 10c2 0 4-1 5-3"/><path d="M14 10c-2 0-4-1-5-3"/><path d="M8 34h24"/></svg>`,
+  },
+  {
+    name: "헬스 클리닉",
+    type: "Health Clinic",
+    image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="24" height="24" rx="2"/><path d="M20 14v12"/><path d="M14 20h12"/><path d="M8 8l4-4h16l4 4"/></svg>`,
+  },
+  {
+    name: "아트 갤러리",
+    type: "Art Gallery",
+    image: "https://images.unsplash.com/photo-1577720643272-265f09367456?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="28" height="20" rx="1"/><path d="M12 28v6"/><path d="M28 28v6"/><path d="M10 34h20"/><path d="M11 14l6 8 4-4 8 6"/><circle cx="14" cy="15" r="2"/></svg>`,
+  },
+  {
+    name: "럭셔리 호텔",
+    type: "Luxury Hotel",
+    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop&q=80",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 34V12l14-7 14 7v22"/><path d="M6 34h28"/><rect x="16" y="24" width="8" height="10"/><path d="M13 16h2v2h-2z"/><path d="M25 16h2v2h-2z"/><path d="M13 22h2v2h-2z"/><path d="M25 22h2v2h-2z"/></svg>`,
+  },
+];
+
+let logos = FALLBACK_LOGOS;
+let sectionTitle = '다양한 공간에 어울리는 사인을 만듭니다';
+let sectionSubtitle = '카페, 레스토랑, 클리닉, 갤러리까지<br class="mobile-br-hide" />각 공간의 분위기에 맞는 감각적인 사인을 디자인합니다';
+try {
+  const { data: dbLogos, error } = await supabase
+    .from('client_logos')
+    .select('*')
+    .eq('is_visible', true)
+    .order('order_index');
+  if (!error && dbLogos && dbLogos.length > 0) {
+    logos = dbLogos.map((item: any, i: number) => ({
+      name: item.name ?? '',
+      type: FALLBACK_LOGOS[i]?.type ?? '',
+      image: item.logo_url ?? '',
+      icon: FALLBACK_LOGOS[i]?.icon ?? '',
+    }));
+  }
+  const { data: sectionData } = await supabase
+    .from('landing_sections')
+    .select('*')
+    .eq('section_key', 'shop_clients')
+    .limit(1)
+    .single();
+  if (sectionData) {
+    sectionTitle = sectionData.title || sectionTitle;
+    sectionSubtitle = sectionData.subtitle || sectionSubtitle;
+  }
+} catch {}
+---
+
+<section class="client-logos" id="clients" data-client-logos data-section-index="5">
+  <div class="client-logos__container">
+    <h3 class="client-logos__title">{sectionTitle}</h3>
+    <p class="client-logos__subtitle" set:html={sectionSubtitle} />
+  </div>
+
+  <div class="client-logos__track-wrapper">
+    <div class="client-logos__track">
+      {/* First set */}
+      {logos.map((logo) => (
+        <div class="client-logos__item">
+          <div class="client-logos__image">
+            <Image src={logo.image} alt={logo.name} loading="lazy" decoding="async" width={400} height={300} format="webp" quality={80} />
+          </div>
+          <span class="client-logos__icon" set:html={logo.icon} />
+          <span class="client-logos__name">{logo.name}</span>
+        </div>
+      ))}
+      {/* Duplicate set for seamless loop */}
+      {logos.map((logo) => (
+        <div class="client-logos__item">
+          <div class="client-logos__image">
+            <Image src={logo.image} alt={logo.name} loading="lazy" decoding="async" width={400} height={300} format="webp" quality={80} />
+          </div>
+          <span class="client-logos__icon" set:html={logo.icon} />
+          <span class="client-logos__name">{logo.name}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ============================================
+     ClientLogos - Marquee Scroll
+     ============================================ */
+
+  /* Section */
+  .client-logos {
+    position: relative;
+    padding: var(--space-4xl) 0;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--background) 0%, var(--background-elevated) 100%);
+    overflow: hidden;
+  }
+
+  .client-logos::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(26, 77, 46, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(76, 175, 80, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Container */
+  .client-logos__container {
+    position: relative;
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+    text-align: center;
+    margin-bottom: var(--space-3xl);
+    z-index: 1;
+  }
+
+  /* Title */
+  .client-logos__title {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
+    background: linear-gradient(135deg, #FFFFFF 0%, rgba(255, 255, 255, 0.8) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Subtitle */
+  .client-logos__subtitle {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .mobile-br-hide {
+    display: inline;
+  }
+
+  /* Track Wrapper - overflow hidden + edge fade */
+  .client-logos__track-wrapper {
+    overflow: hidden;
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+  }
+
+  /* Marquee Animation */
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Track */
+  .client-logos__track {
+    display: flex;
+    gap: var(--space-lg);
+    width: max-content;
+    animation: marquee 30s linear infinite;
+    will-change: transform;
+  }
+
+  .client-logos__track:hover {
+    animation-play-state: paused;
+  }
+
+  /* Logo Item */
+  .client-logos__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+    width: 180px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    cursor: default;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .client-logos__item:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(76, 175, 80, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Image */
+  .client-logos__image {
+    width: 100%;
+    height: 120px;
+    overflow: hidden;
+  }
+
+  .client-logos__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+  }
+
+  .client-logos__item:hover .client-logos__image img {
+    transform: scale(1.08);
+  }
+
+  /* Icon Container */
+  .client-logos__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--grey-500);
+    transition: color 0.3s ease;
+  }
+
+  .client-logos__icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .client-logos__item:hover .client-logos__icon {
+    color: var(--primary-light);
+  }
+
+  /* Name */
+  .client-logos__name {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: var(--letter-spacing-wide);
+    white-space: nowrap;
+    transition: color 0.3s ease;
+    padding-bottom: var(--space-md);
+  }
+
+  .client-logos__item:hover .client-logos__name {
+    color: var(--text-primary);
+  }
+
+  /* ============================================
+     Responsive
+     ============================================ */
+
+  /* Tablet */
+  @media (max-width: 1023px) {
+    .client-logos__track {
+      gap: var(--space-md);
+    }
+  }
+
+  /* Mobile */
+  @media (max-width: 719px) {
+    .client-logos {
+      padding: var(--space-3xl) 0;
+    }
+
+    .client-logos__container {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .client-logos__title {
+      font-size: var(--font-size-xl);
+    }
+
+    .client-logos__subtitle {
+      font-size: var(--font-size-sm);
+    }
+
+    .mobile-br-hide {
+      display: none;
+    }
+
+    .client-logos__item {
+      width: 150px;
+    }
+
+    .client-logos__image {
+      height: 90px;
+    }
+
+    .client-logos__icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    .client-logos__track {
+      gap: var(--space-sm);
+      animation-duration: 20s;
+    }
+
+    .client-logos__name {
+      font-size: 0.625rem;
+    }
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    .client-logos__track {
+      animation-play-state: paused;
+    }
+  }
+</style>

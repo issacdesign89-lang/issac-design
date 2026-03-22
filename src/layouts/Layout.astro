@@ -1,0 +1,597 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  noindex?: boolean;
+}
+
+const {
+  title = "issac.design - Professional LED Signage & Outdoor Advertising",
+  description = "15년 경력의 프리미엄 간판 전문 업체. LED Channel Letters, Neon Signs, 옥외광고물 제작부터 설치까지 전국 시공 가능. 1년 무상 A/S 보증.",
+  image = "/images/og-image.jpg",
+  canonical,
+  noindex = false
+} = Astro.props;
+
+const currentUrl = new URL(Astro.url.pathname, Astro.site || 'https://issac.design');
+const canonicalURL = canonical || currentUrl.href;
+const ogImageURL = new URL(image, Astro.site || 'https://issac.design').href;
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta name="keywords" content="LED 간판, 채널간판, 네온사인, 옥외광고, 간판제작, 간판시공, LED Signage, Neon Sign, Channel Letters, issac.design" />
+    <meta name="author" content="issac.design" />
+    <meta name="theme-color" content="#1A4D2E" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="issac.design" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="issac.design" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonicalURL} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <title>{title}</title>
+
+    <!-- Preload critical self-hosted fonts -->
+    <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Schema.org Structured Data (LocalBusiness) -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "issac.design",
+      "description": "프리미엄 LED 간판 및 옥외광고물 전문 제작 업체",
+      "url": "https://issac.design",
+      "telephone": "+82-10-1234-5678",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "테헤란로 123 아이삭빌딩 2층",
+        "addressLocality": "강남구",
+        "addressRegion": "서울",
+        "addressCountry": "KR"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "37.5665",
+        "longitude": "126.9780"
+      },
+      "openingHours": "Mo-Fr 09:00-18:00, Sa 09:00-15:00",
+      "priceRange": "₩₩₩",
+      "image": ogImageURL,
+      "logo": "https://issac.design/images/logo.png",
+      "sameAs": [
+        "https://www.instagram.com/issac.design",
+        "https://www.youtube.com/@issac.design"
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "127"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "대한민국"
+      }
+    })} />
+  </head>
+  <body>
+    <!-- Skip to main content (Accessibility) -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+
+    <slot />
+
+    <!-- Lenis Smooth Scroll & GSAP Init -->
+    <script>
+      import Lenis from 'lenis';
+      import gsap from 'gsap';
+      import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+      // Register GSAP plugins
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Check for reduced motion preference (Accessibility)
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Check if mobile device (Performance optimization)
+      const isMobile = window.innerWidth < 768;
+
+      // Initialize Lenis smooth scroll with accessibility and performance considerations
+      const lenis = new Lenis({
+        duration: prefersReducedMotion ? 0.1 : (isMobile ? 0.8 : 1.2),
+        easing: (t) => prefersReducedMotion ? t : Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        smoothWheel: !prefersReducedMotion && !isMobile,
+        wheelMultiplier: 1,
+        touchMultiplier: isMobile ? 1.5 : 2,
+        infinite: false,
+      });
+      
+      // Sync Lenis with GSAP ScrollTrigger
+      lenis.on('scroll', ScrollTrigger.update);
+      
+      gsap.ticker.add((time) => {
+        lenis.raf(time * 1000);
+      });
+      
+      gsap.ticker.lagSmoothing(0);
+      
+      // Store lenis instance globally
+      window.lenis = lenis;
+      
+      // Handle anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = document.querySelector(anchor.getAttribute('href'));
+          if (target) {
+            lenis.scrollTo(target, {
+              offset: -80,
+              duration: 1.2,
+            });
+          }
+        });
+      });
+      
+      // Cleanup on page navigation (for Astro View Transitions)
+      document.addEventListener('astro:before-swap', () => {
+        lenis.destroy();
+        ScrollTrigger.getAll().forEach(st => st.kill());
+      });
+    </script>
+
+    <!-- Kakao Webview → External Browser Popup -->
+    <script is:inline>
+      (function() {
+        var ua = navigator.userAgent;
+        if (!/KAKAOTALK/i.test(ua)) return;
+        if (sessionStorage.getItem('kakao-popup-dismissed')) return;
+
+        var isIOS = /iPhone|iPad|iPod/i.test(ua);
+        var url = location.href;
+        var browserName = isIOS ? 'Safari' : 'Chrome';
+
+        var overlay = document.createElement('div');
+        overlay.id = 'kakao-popup-overlay';
+        overlay.style.cssText =
+          'position:fixed;inset:0;z-index:999999;' +
+          'background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);' +
+          '-webkit-backdrop-filter:blur(4px);' +
+          'display:flex;align-items:flex-end;justify-content:center;' +
+          'padding:0 16px 16px;' +
+          'padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));';
+
+        overlay.innerHTML =
+          '<div id="kakao-popup" style="' +
+            'width:100%;max-width:400px;background:#1E1E1E;border-radius:20px;' +
+            'overflow:hidden;box-shadow:0 -4px 40px rgba(0,0,0,0.4);' +
+            'animation:kakaoSlideUp .35s cubic-bezier(.2,.9,.3,1);">' +
+
+            /* Handle bar */
+            '<div style="display:flex;justify-content:center;padding:12px 0 4px;">' +
+              '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.2);"></div>' +
+            '</div>' +
+
+            /* Header */
+            '<div style="padding:16px 24px 12px;text-align:center;">' +
+              '<div style="display:inline-flex;align-items:center;justify-content:center;' +
+                'width:48px;height:48px;border-radius:14px;background:rgba(255,232,18,0.15);margin-bottom:12px;">' +
+                '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFE812" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' +
+                '</svg>' +
+              '</div>' +
+              '<h3 style="margin:0;font-size:17px;font-weight:700;color:#fff;line-height:1.4;">' +
+                '외부 브라우저에서 열어주세요' +
+              '</h3>' +
+              '<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.55);line-height:1.5;">' +
+                '카카오톡 브라우저에서는 일부 기능이<br>제한될 수 있습니다' +
+              '</p>' +
+            '</div>' +
+
+            /* Guide Steps */
+            '<div style="padding:0 20px 16px;">' +
+              '<div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;">' +
+                /* Step 1 */
+                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">' +
+                  '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;' +
+                    'background:rgba(255,232,18,0.2);color:#FFE812;font-size:12px;font-weight:700;' +
+                    'display:flex;align-items:center;justify-content:center;">1</div>' +
+                  '<p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">' +
+                    '아래 <b style="color:#FFE812;">' + browserName + '로 열기</b> 버튼을 눌러주세요' +
+                  '</p>' +
+                '</div>' +
+                /* Step 2 */
+                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">' +
+                  '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;' +
+                    'background:rgba(255,232,18,0.2);color:#FFE812;font-size:12px;font-weight:700;' +
+                    'display:flex;align-items:center;justify-content:center;">2</div>' +
+                  '<p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">' +
+                    '버튼이 동작하지 않으면 우측 하단<br>' +
+                    '<b style="color:#fff;"> ⋯ 더보기</b> → <b style="color:#fff;">' +
+                    (isIOS ? '다른 브라우저로 열기' : '다른 브라우저에서 열기') +
+                    '</b></p>' +
+                '</div>' +
+                /* Step 3 */
+                '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+                  '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;' +
+                    'background:rgba(255,232,18,0.2);color:#FFE812;font-size:12px;font-weight:700;' +
+                    'display:flex;align-items:center;justify-content:center;">3</div>' +
+                  '<p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">' +
+                    browserName + '에서 모든 기능을<br>정상적으로 이용하실 수 있습니다' +
+                  '</p>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+
+            /* Buttons */
+            '<div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px;">' +
+              '<button id="kakao-open-btn" style="' +
+                'width:100%;padding:14px;border:none;border-radius:12px;' +
+                'background:#FFE812;color:#1E1E1E;font-size:15px;font-weight:700;' +
+                'cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+                  '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+                  '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' +
+                '</svg>' +
+                browserName + '로 열기' +
+              '</button>' +
+              '<button id="kakao-close-btn" style="' +
+                'width:100%;padding:12px;border:none;border-radius:12px;' +
+                'background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);' +
+                'font-size:14px;cursor:pointer;">' +
+                '이대로 볼게요' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+
+        /* Slide-up animation */
+        var style = document.createElement('style');
+        style.textContent = '@keyframes kakaoSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}';
+        document.head.appendChild(style);
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('kakao-open-btn').addEventListener('click', function() {
+          if (isIOS) {
+            location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+          } else {
+            location.href = 'intent://' + url.replace(/https?:\/\//, '') +
+              '#Intent;scheme=https;action=android.intent.action.VIEW;end';
+          }
+        });
+
+        function closePopup() {
+          sessionStorage.setItem('kakao-popup-dismissed', '1');
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity .2s';
+          setTimeout(function() { overlay.remove(); }, 200);
+        }
+
+        document.getElementById('kakao-close-btn').addEventListener('click', closePopup);
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) closePopup();
+        });
+      })();
+    </script>
+
+    <!-- Global Auth State Management -->
+    <script is:inline>
+      (function() {
+        function initAuthState() {
+          // Abort if no auth elements exist on this page
+          var authElements = document.querySelectorAll('[data-auth-login],[data-auth-btn],[data-mobile-auth-link]');
+          if (authElements.length === 0) return;
+
+          fetch('/api/auth/me', { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.authenticated) return;
+
+              var user = data.user;
+              var initial = (user.displayName || user.email || '?').charAt(0).toUpperCase();
+
+              // --- LandingNavbar: [data-auth-login] ---
+              document.querySelectorAll('[data-auth-login]').forEach(function(el) {
+                el.setAttribute('href', '#');
+                el.setAttribute('aria-label', user.displayName || '내 계정');
+                el.removeAttribute('data-auth-login');
+                el.setAttribute('data-auth-logged-in', '');
+
+                // Replace icon with initial badge
+                var svg = el.querySelector('svg');
+                if (svg) {
+                  var badge = document.createElement('span');
+                  badge.className = 'auth-initial-badge';
+                  badge.textContent = initial;
+                  badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;font-weight:700;flex-shrink:0;';
+                  svg.replaceWith(badge);
+                }
+
+                // Update label
+                var label = el.querySelector('[data-auth-label]');
+                if (label) label.textContent = user.displayName || '내 계정';
+
+                // Add dropdown
+                setupAuthDropdown(el, user);
+              });
+
+              // --- ShopNavbar: [data-auth-btn] ---
+              document.querySelectorAll('[data-auth-btn]').forEach(function(el) {
+                el.setAttribute('href', '#');
+                el.setAttribute('aria-label', user.displayName || '내 계정');
+                el.removeAttribute('data-auth-btn');
+                el.setAttribute('data-auth-logged-in', '');
+
+                // Replace SVG with initial or avatar
+                if (user.avatarUrl) {
+                  var img = document.createElement('img');
+                  img.src = user.avatarUrl;
+                  img.alt = user.displayName || '';
+                  img.style.cssText = 'width:24px;height:24px;border-radius:50%;object-fit:cover;';
+                  var svg = el.querySelector('svg');
+                  if (svg) svg.replaceWith(img);
+                }
+
+                setupAuthDropdown(el, user);
+              });
+
+              // --- MenuOverlay: [data-mobile-auth-link] (in both MenuOverlay and ShopNavbar mobile) ---
+              document.querySelectorAll('[data-mobile-auth-link]').forEach(function(el) {
+                el.textContent = '로그아웃';
+                el.setAttribute('href', '#');
+                el.removeAttribute('data-mobile-auth-link');
+                el.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  handleLogout();
+                });
+              });
+
+              // --- MenuOverlay item (section="login") ---
+              document.querySelectorAll('.menu-overlay__link[data-section="login"]').forEach(function(el) {
+                var textEls = el.querySelectorAll('.menu-overlay__link-text');
+                textEls.forEach(function(t) { t.textContent = '로그아웃'; });
+                el.setAttribute('data-section', 'logout');
+                el.setAttribute('href', '#');
+
+                // Remove existing click listener by cloning
+                var clone = el.cloneNode(true);
+                el.parentNode.replaceChild(clone, el);
+                clone.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleLogout();
+                });
+              });
+            })
+            .catch(function() {
+              // Auth check failed silently — user remains in logged-out state
+            });
+        }
+
+        function setupAuthDropdown(trigger, user) {
+          // Prevent default link behavior
+          trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Toggle existing dropdown
+            var existing = trigger.parentElement.querySelector('.auth-dropdown');
+            if (existing) {
+              existing.remove();
+              return;
+            }
+
+            // Close other dropdowns
+            document.querySelectorAll('.auth-dropdown').forEach(function(d) { d.remove(); });
+
+            var dropdown = document.createElement('div');
+            dropdown.className = 'auth-dropdown';
+            dropdown.style.cssText =
+              'position:absolute;top:calc(100% + 8px);right:0;' +
+              'min-width:180px;background:rgba(17,17,17,0.95);' +
+              'backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);' +
+              'border:1px solid rgba(255,255,255,0.1);border-radius:12px;' +
+              'padding:8px;z-index:9999;' +
+              'box-shadow:0 20px 40px rgba(0,0,0,0.5);' +
+              'animation:authDropdownIn .15s ease-out;';
+
+            // User info header
+            var header = document.createElement('div');
+            header.style.cssText = 'padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;';
+            header.innerHTML =
+              '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px;">' +
+              escapeHtml(user.displayName || '사용자') + '</div>' +
+              '<div style="font-size:11px;color:rgba(255,255,255,0.5);">' +
+              escapeHtml(user.email || '') + '</div>';
+            dropdown.appendChild(header);
+
+            // Menu items
+            var items = [
+              { label: '마이페이지', href: '/shop/mypage', icon: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2' },
+              { label: '주문내역', href: '/shop/mypage/orders', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+              { label: '견적내역', href: '/shop/mypage/quotes', icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8' },
+            ];
+
+            items.forEach(function(item) {
+              var a = document.createElement('a');
+              a.href = item.href;
+              a.style.cssText =
+                'display:flex;align-items:center;gap:10px;padding:9px 12px;' +
+                'border-radius:8px;font-size:13px;font-weight:500;' +
+                'color:rgba(255,255,255,0.8);transition:all .15s ease;';
+              a.innerHTML =
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + item.icon + '"/></svg>' +
+                '<span>' + item.label + '</span>';
+              a.addEventListener('mouseenter', function() { a.style.background = 'rgba(255,255,255,0.08)'; a.style.color = '#fff'; });
+              a.addEventListener('mouseleave', function() { a.style.background = 'transparent'; a.style.color = 'rgba(255,255,255,0.8)'; });
+              dropdown.appendChild(a);
+            });
+
+            // Divider
+            var divider = document.createElement('div');
+            divider.style.cssText = 'height:1px;background:rgba(255,255,255,0.08);margin:4px 0;';
+            dropdown.appendChild(divider);
+
+            // Logout
+            var logoutBtn = document.createElement('button');
+            logoutBtn.type = 'button';
+            logoutBtn.style.cssText =
+              'display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;' +
+              'border:none;border-radius:8px;background:transparent;' +
+              'font-size:13px;font-weight:500;color:rgba(255,100,100,0.9);cursor:pointer;transition:all .15s ease;';
+            logoutBtn.innerHTML =
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>' +
+              '<span>로그아웃</span>';
+            logoutBtn.addEventListener('mouseenter', function() { logoutBtn.style.background = 'rgba(255,100,100,0.1)'; });
+            logoutBtn.addEventListener('mouseleave', function() { logoutBtn.style.background = 'transparent'; });
+            logoutBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              dropdown.remove();
+              handleLogout();
+            });
+            dropdown.appendChild(logoutBtn);
+
+            // Position relative to trigger's parent
+            var parent = trigger.parentElement;
+            if (parent) {
+              parent.style.position = 'relative';
+              parent.appendChild(dropdown);
+            }
+
+            // Close on outside click
+            setTimeout(function() {
+              document.addEventListener('click', function closeDropdown(e) {
+                if (!dropdown.contains(e.target) && e.target !== trigger && !trigger.contains(e.target)) {
+                  dropdown.remove();
+                  document.removeEventListener('click', closeDropdown);
+                }
+              });
+            }, 0);
+          });
+        }
+
+        function handleLogout() {
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+            .then(function() { window.location.href = '/'; })
+            .catch(function() { window.location.href = '/'; });
+        }
+
+        function escapeHtml(str) {
+          var div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        // Inject dropdown animation keyframes
+        if (!document.getElementById('auth-dropdown-style')) {
+          var style = document.createElement('style');
+          style.id = 'auth-dropdown-style';
+          style.textContent = '@keyframes authDropdownIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}';
+          document.head.appendChild(style);
+        }
+
+        // Run on load and on Astro page transitions
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initAuthState);
+        } else {
+          initAuthState();
+        }
+        document.addEventListener('astro:page-load', initAuthState);
+      })();
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+  @import '../styles/typography.css';
+
+  /* Skip to Content Link (Accessibility) */
+  .skip-to-content {
+    position: absolute;
+    top: -100px;
+    left: 0;
+    z-index: 10000;
+    padding: 1rem 1.5rem;
+    background: var(--primary);
+    color: #FFFFFF;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 var(--radius-md) 0;
+    transition: top 0.3s ease;
+  }
+
+  .skip-to-content:focus {
+    top: 0;
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Smooth Scroll Behavior (respects prefers-reduced-motion) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Focus Visible Styles (Accessibility) */
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Remove outline for mouse users, keep for keyboard users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+</style>

@@ -1,0 +1,494 @@
+---
+/**
+ * Services Section
+ * 8개 서비스 카드 그리드 with GSAP ScrollTrigger 애니메이션
+ */
+
+import { supabase } from '../../lib/supabase';
+
+const FALLBACK_SERVICES = [
+  {
+    icon: 'design',
+    title: 'Creative Design',
+    desc: '브랜드 아이덴티티를 담은 창의적 디자인'
+  },
+  {
+    icon: 'led',
+    title: 'LED Signage',
+    desc: '고휘도 프리미엄 LED 간판 제작'
+  },
+  {
+    icon: 'banner',
+    title: 'Hanging Banner',
+    desc: '현수막, X-Banner, Roll-Up Banner 제작'
+  },
+  {
+    icon: 'outdoor',
+    title: 'Outdoor Advertising',
+    desc: '대형 옥외광고 간판 제작 및 설치'
+  },
+  {
+    icon: 'install',
+    title: 'Installation',
+    desc: '안전하고 신속한 전문 설치 서비스'
+  },
+  {
+    icon: 'quote',
+    title: 'Free Quote',
+    desc: '실시간 무료 견적 상담 제공'
+  },
+  {
+    icon: 'support',
+    title: 'A/S Warranty',
+    desc: '제작 후 1년 무상 A/S 보증'
+  },
+  {
+    icon: 'fast',
+    title: 'Fast Production',
+    desc: '7일 내 제작 완료 보장'
+  },
+];
+
+let services = FALLBACK_SERVICES;
+try {
+  const { data, error } = await supabase
+    .from('service_items')
+    .select('*')
+    .eq('is_visible', true)
+    .order('order_index');
+  if (!error && data && data.length > 0) {
+    services = data.map((s: any) => ({
+      icon: s.icon ?? 'design',
+      title: s.title,
+      desc: s.description,
+    }));
+  }
+} catch {}
+
+// SVG 아이콘 매핑
+const icons: Record<string, string> = {
+  design: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+    <path d="M2 2l7.586 7.586"/>
+    <circle cx="11" cy="11" r="2"/>
+  </svg>`,
+  led: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <circle cx="12" cy="12" r="6"/>
+    <line x1="12" y1="2" x2="12" y2="6"/>
+    <line x1="12" y1="18" x2="12" y2="22"/>
+    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+    <line x1="2" y1="12" x2="6" y2="12"/>
+    <line x1="18" y1="12" x2="22" y2="12"/>
+    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+  </svg>`,
+  banner: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <line x1="3" y1="9" x2="21" y2="9"/>
+    <line x1="9" y1="21" x2="9" y2="9"/>
+  </svg>`,
+  outdoor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>`,
+  install: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="18" x2="12" y2="12"/>
+    <line x1="9" y1="15" x2="12" y2="12"/>
+    <line x1="15" y1="15" x2="12" y2="12"/>
+  </svg>`,
+  quote: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+  </svg>`,
+  support: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <polyline points="9 12 11 14 15 10"/>
+  </svg>`,
+  fast: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </svg>`,
+};
+---
+
+<section class="services" id="services">
+  <!-- Decorative Background -->
+  <div class="services__bg">
+    <div class="services__bg-gradient"></div>
+    <div class="services__bg-pattern"></div>
+  </div>
+
+  <div class="services__container">
+    <!-- Section Header -->
+    <header class="services__header">
+      <span class="services__label">Why issac.design</span>
+      <h2 class="services__title">왜 issac.design인가?</h2>
+      <p class="services__description">
+        감각적인 디자인, 정교한 제작, 세심한 마무리까지
+      </p>
+    </header>
+
+    <!-- Service Cards Grid -->
+    <div class="services__grid">
+      {services.map((service, index) => (
+        <article class="services__card" data-service-card style={`--delay: ${index * 0.08}s`}>
+          <div class="services__card-glow"></div>
+          <div class="services__card-content">
+            <div class="services__icon" set:html={icons[service.icon]} />
+            <h3 class="services__card-title">{service.title}</h3>
+            <p class="services__card-desc">{service.desc}</p>
+          </div>
+          <div class="services__card-border"></div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .services {
+    position: relative;
+    padding: var(--space-4xl) 0;
+    overflow: hidden;
+    background: var(--background);
+  }
+
+  /* Background Effects */
+  .services__bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .services__bg-gradient {
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(26, 54, 93, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(49, 130, 206, 0.08) 0%, transparent 50%);
+  }
+
+  .services__bg-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Container */
+  .services__container {
+    position: relative;
+    z-index: 1;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  /* Header */
+  .services__header {
+    text-align: center;
+    margin-bottom: var(--space-4xl);
+  }
+
+  .services__label {
+    display: inline-block;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wider);
+    color: var(--accent);
+    margin-bottom: var(--space-md);
+    padding: var(--space-xs) var(--space-lg);
+    background: rgba(99, 179, 237, 0.1);
+    border: 1px solid rgba(99, 179, 237, 0.2);
+    border-radius: var(--radius-full);
+  }
+
+  .services__title {
+    font-size: var(--font-size-4xl);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+  }
+
+  .services__description {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Grid */
+  .services__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-lg);
+  }
+
+  /* Card */
+  .services__card {
+    position: relative;
+    padding: var(--space-2xl);
+    background: linear-gradient(
+      135deg,
+      rgba(26, 54, 93, 0.08) 0%,
+      rgba(17, 17, 17, 0.4) 100%
+    );
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: 
+      transform var(--transition-base),
+      box-shadow var(--transition-base);
+  }
+
+  .services__card.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: 
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--delay),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--delay);
+  }
+
+  /* Card Glow */
+  .services__card-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      circle at center,
+      rgba(99, 179, 237, 0.15) 0%,
+      transparent 50%
+    );
+    opacity: 0;
+    transform: scale(0.5);
+    transition: 
+      opacity var(--transition-slow),
+      transform var(--transition-slow);
+    pointer-events: none;
+  }
+
+  .services__card:hover .services__card-glow {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Card Border */
+  .services__card-border {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: border-color var(--transition-base);
+    pointer-events: none;
+  }
+
+  .services__card:hover .services__card-border {
+    border-color: rgba(99, 179, 237, 0.3);
+  }
+
+  /* Card Hover State */
+  .services__card:hover {
+    transform: translateY(-8px);
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.4),
+      0 0 60px rgba(26, 54, 93, 0.2);
+  }
+
+  /* Card Content */
+  .services__card-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Icon */
+  .services__icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-lg);
+    color: var(--accent);
+    transition: 
+      transform var(--transition-base),
+      color var(--transition-base);
+  }
+
+  .services__icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .services__card:hover .services__icon {
+    transform: scale(1.1);
+    color: var(--accent-light);
+  }
+
+  /* Card Title */
+  .services__card-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+    letter-spacing: var(--letter-spacing-tight);
+    transition: color var(--transition-base);
+  }
+
+  .services__card:hover .services__card-title {
+    color: var(--accent-light);
+  }
+
+  /* Card Description */
+  .services__card-desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    line-height: var(--line-height-relaxed);
+    transition: color var(--transition-base);
+  }
+
+  .services__card:hover .services__card-desc {
+    color: var(--text-secondary);
+  }
+
+  /* Responsive: Tablet (3 columns) */
+  @media (max-width: 1199px) {
+    .services__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* Responsive: Small Tablet (2 columns) */
+  @media (max-width: 899px) {
+    .services__grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+
+    .services__card {
+      padding: var(--space-xl);
+    }
+
+    .services__icon {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  /* Responsive: Mobile (1 column) */
+  @media (max-width: 599px) {
+    .services {
+      padding: var(--space-3xl) 0;
+    }
+
+    .services__header {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .services__title {
+      font-size: var(--font-size-2xl);
+    }
+
+    .services__description {
+      font-size: var(--font-size-base);
+    }
+
+    .services__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .services__card {
+      padding: var(--space-lg);
+    }
+
+    .services__card-title {
+      font-size: var(--font-size-lg);
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Service cards animation
+  const initServicesAnimation = () => {
+    const cards = document.querySelectorAll('[data-service-card]');
+    const section = document.querySelector('.services');
+
+    if (!cards.length || !section) return;
+
+    // Create ScrollTrigger for staggered reveal
+    ScrollTrigger.create({
+      trigger: section,
+      start: 'top 80%',
+      onEnter: () => {
+        cards.forEach((card) => {
+          card.classList.add('is-visible');
+        });
+      },
+      once: true,
+    });
+
+    // Alternative: GSAP stagger animation (더 세밀한 제어가 필요할 때)
+    // gsap.set(cards, { opacity: 0, y: 40 });
+    // 
+    // ScrollTrigger.create({
+    //   trigger: section,
+    //   start: 'top 80%',
+    //   onEnter: () => {
+    //     gsap.to(cards, {
+    //       opacity: 1,
+    //       y: 0,
+    //       duration: 0.6,
+    //       stagger: 0.08,
+    //       ease: 'power3.out',
+    //     });
+    //   },
+    //   once: true,
+    // });
+
+    // Header animation
+    const header = section.querySelector('.services__header');
+    if (header) {
+      gsap.fromTo(
+        header,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: header,
+            start: 'top 85%',
+            once: true,
+          },
+        }
+      );
+    }
+  };
+
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initServicesAnimation);
+  } else {
+    initServicesAnimation();
+  }
+</script>

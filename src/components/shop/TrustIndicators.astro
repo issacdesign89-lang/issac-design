@@ -1,0 +1,212 @@
+---
+/**
+ * TrustIndicators Component
+ * Trust badges/indicators showcasing company credentials
+ * Pure CSS - no JavaScript
+ */
+
+import { supabase } from '../../lib/supabase';
+
+const FALLBACK_TRUST_ITEMS = [
+  {
+    number: "No.1",
+    label: "Design Sensibility",
+    description: "세련된 감각으로 완성하는 사이니지",
+  },
+  {
+    number: "1,000+",
+    label: "Unique Stories",
+    description: "각기 다른 브랜드의 이야기를 담았습니다",
+  },
+  {
+    number: "100%",
+    label: "Free Consultation",
+    description: "브랜드에 맞는 최적의 제안을 드립니다",
+  },
+  {
+    number: "24h",
+    label: "Always With You",
+    description: "설치 이후에도 함께합니다",
+  },
+];
+
+let trustItems = FALLBACK_TRUST_ITEMS;
+let sectionTitle = '왜 issac.design인가?';
+let sectionSubtitle = '감각적인 디자인과 세심한 소통으로 브랜드를 빛냅니다';
+try {
+  const { data: dbItems, error } = await supabase
+    .from('trust_indicators')
+    .select('*')
+    .eq('is_visible', true)
+    .order('order_index');
+  if (!error && dbItems && dbItems.length > 0) {
+    trustItems = dbItems.map((item: any) => ({
+      number: item.number_text ?? '',
+      label: item.label ?? '',
+      description: item.description ?? '',
+    }));
+  }
+  const { data: sectionData } = await supabase
+    .from('landing_sections')
+    .select('*')
+    .eq('section_key', 'shop_trust')
+    .limit(1)
+    .single();
+  if (sectionData) {
+    sectionTitle = sectionData.title || sectionTitle;
+    sectionSubtitle = sectionData.subtitle || sectionSubtitle;
+  }
+} catch {}
+---
+
+<section class="trust" id="trust" data-trust-section data-section-index="4">
+  <div class="trust__container">
+    <!-- Section Header -->
+    <div class="trust__header">
+      <h2 class="trust__title">{sectionTitle}</h2>
+      <p class="trust__subtitle">{sectionSubtitle}</p>
+    </div>
+
+    <!-- Trust Grid -->
+    <div class="trust__grid">
+      {trustItems.map((item) => (
+        <div class="trust__card" data-trust-card>
+          <span class="trust__number" data-trust-number>
+            {item.number}
+          </span>
+          <span class="trust__label">{item.label}</span>
+          <p class="trust__description">{item.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Section */
+  .trust {
+    position: relative;
+    padding: var(--space-4xl) 0;
+    background: var(--surface);
+  }
+
+  .trust__container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  /* Header */
+  .trust__header {
+    margin-bottom: var(--space-3xl);
+    text-align: center;
+  }
+
+  .trust__title {
+    font-size: var(--font-size-4xl);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+  }
+
+  .trust__subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+  }
+
+  /* Grid */
+  .trust__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-lg);
+  }
+
+  /* Card */
+  .trust__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-2xl) var(--space-lg);
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: transform var(--transition-base), border-color var(--transition-base);
+  }
+
+  .trust__card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+  }
+
+  /* Number */
+  .trust__number {
+    display: block;
+    font-size: var(--font-size-4xl);
+    font-weight: 700;
+    color: var(--primary);
+    line-height: var(--line-height-tight);
+    margin-bottom: var(--space-sm);
+  }
+
+  /* Label */
+  .trust__label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
+    margin-bottom: var(--space-sm);
+  }
+
+  /* Description */
+  .trust__description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-normal);
+  }
+
+  /* Tablet */
+  @media (max-width: 1023px) {
+    .trust__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trust__title {
+      font-size: var(--font-size-3xl);
+    }
+  }
+
+  /* Mobile */
+  @media (max-width: 719px) {
+    .trust__grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+
+    .trust__card {
+      padding: var(--space-lg) var(--space-md);
+    }
+
+    .trust__title {
+      font-size: var(--font-size-2xl);
+    }
+
+    .trust__subtitle {
+      font-size: var(--font-size-base);
+    }
+
+    .trust__header {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .trust__number {
+      font-size: var(--font-size-3xl);
+    }
+  }
+</style>

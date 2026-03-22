@@ -1,0 +1,851 @@
+---
+/**
+ * QuoteForm Component
+ * Quote request form for products
+ */
+
+interface Props {
+  productName?: string;
+}
+
+const { productName = '' } = Astro.props;
+---
+
+<div class="quote-form" data-quote-form>
+  <div class="quote-form__container">
+    <!-- Header -->
+    <div class="quote-form__header">
+      <h3 class="quote-form__title">견적 문의</h3>
+      <p class="quote-form__description">
+        {productName ? `${productName}에 대한 견적을 문의하세요` : '제품에 대한 견적을 문의하세요'}
+      </p>
+    </div>
+
+    <!-- Form -->
+    <form class="quote-form__form" data-quote-form-element>
+      <!-- Name -->
+      <div class="quote-form__field">
+        <label for="quote-name" class="quote-form__label">
+          이름 <span class="required">*</span>
+        </label>
+        <input
+          type="text"
+          id="quote-name"
+          name="name"
+          class="quote-form__input"
+          placeholder="홍길동"
+          required
+        />
+      </div>
+
+      <!-- Phone -->
+      <div class="quote-form__field">
+        <label for="quote-phone" class="quote-form__label">
+          연락처 <span class="required">*</span>
+        </label>
+        <input
+          type="tel"
+          id="quote-phone"
+          name="phone"
+          class="quote-form__input"
+          placeholder="010-1234-5678"
+          required
+        />
+      </div>
+
+      <!-- Email -->
+      <div class="quote-form__field">
+        <label for="quote-email" class="quote-form__label">
+          이메일
+        </label>
+        <input
+          type="email"
+          id="quote-email"
+          name="email"
+          class="quote-form__input"
+          placeholder="example@email.com"
+        />
+      </div>
+
+      <!-- Product -->
+      {productName && (
+        <div class="quote-form__field">
+          <label for="quote-product" class="quote-form__label">
+            문의 제품
+          </label>
+          <input
+            type="text"
+            id="quote-product"
+            name="product"
+            class="quote-form__input"
+            value={productName}
+            readonly
+          />
+        </div>
+      )}
+
+      <!-- Size/Specs -->
+      <div class="quote-form__field">
+        <label for="quote-size" class="quote-form__label">
+          희망 사이즈/사양
+        </label>
+        <input
+          type="text"
+          id="quote-size"
+          name="size"
+          class="quote-form__input"
+          placeholder="예: 가로 3m x 세로 1m"
+        />
+      </div>
+
+      <!-- Installation Address -->
+      <div class="quote-form__field">
+        <label for="quote-address" class="quote-form__label">
+          현장 주소 <span class="required">*</span>
+        </label>
+        <input
+          type="text"
+          id="quote-address"
+          name="address"
+          class="quote-form__input"
+          placeholder="서울시 강남구 테헤란로 123"
+          required
+        />
+      </div>
+
+      <!-- Installation Floor -->
+      <div class="quote-form__field">
+        <label for="quote-floor" class="quote-form__label">
+          설치 층수 <span class="required">*</span>
+        </label>
+        <select
+          id="quote-floor"
+          name="floor"
+          class="quote-form__input quote-form__select"
+          required
+        >
+          <option value="">층수를 선택하세요</option>
+          <option value="1층">1층</option>
+          <option value="2층">2층</option>
+          <option value="3층">3층</option>
+          <option value="4층 이상">4층 이상</option>
+          <option value="옥상">옥상</option>
+        </select>
+      </div>
+
+      <!-- Crane Needed -->
+      <div class="quote-form__checkbox-group">
+        <div class="quote-form__checkbox">
+          <input
+            type="checkbox"
+            id="quote-crane"
+            name="crane"
+            value="yes"
+          />
+          <label for="quote-crane">
+            크레인 사용 필요 (고층 설치)
+          </label>
+        </div>
+
+        <!-- Design File Available -->
+        <div class="quote-form__checkbox">
+          <input
+            type="checkbox"
+            id="quote-design-file"
+            name="designFile"
+            value="yes"
+          />
+          <label for="quote-design-file">
+            디자인 파일 보유 (AI, PDF, PSD 등)
+          </label>
+        </div>
+      </div>
+
+      <!-- Site Photos Upload (Required) -->
+      <div class="quote-form__field">
+        <label class="quote-form__label">
+          현장 사진 <span class="required">*</span>
+        </label>
+        <p class="quote-form__field-hint">정확한 견적을 위해 현장 사진을 첨부해주세요</p>
+        <div class="quote-form__upload quote-form__upload--site-photos" data-upload-area-site>
+          <input
+            type="file"
+            id="quote-site-photos"
+            name="sitePhotos"
+            class="quote-form__upload-input"
+            accept=".jpg,.jpeg,.png"
+            multiple
+            required
+            data-upload-input-site
+          />
+          <div class="quote-form__upload-content">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="quote-form__upload-icon">
+              <rect x="3" y="6" width="26" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M3 22l8-8 4 4 8-8 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="quote-form__upload-text">현장 사진을 업로드하세요 (필수)</p>
+            <p class="quote-form__upload-hint">JPG, PNG (최대 5MB, 여러 장 가능)</p>
+          </div>
+        </div>
+        <div class="quote-form__upload-preview" data-upload-preview-site></div>
+      </div>
+
+      <!-- Message -->
+      <div class="quote-form__field">
+        <label for="quote-message" class="quote-form__label">
+          상세 문의 내용 <span class="required">*</span>
+        </label>
+        <textarea
+          id="quote-message"
+          name="message"
+          class="quote-form__textarea"
+          rows="5"
+          placeholder="제작하고 싶은 간판에 대해 자세히 설명해주세요. 설치 장소, 원하는 디자인, 납기 등을 적어주시면 더 정확한 견적을 받으실 수 있습니다."
+          required
+        ></textarea>
+      </div>
+
+      <!-- File Upload -->
+      <div class="quote-form__field">
+        <label class="quote-form__label">
+          참고 파일 첨부
+        </label>
+        <div class="quote-form__upload" data-upload-area>
+          <input
+            type="file"
+            id="quote-files"
+            name="files"
+            class="quote-form__upload-input"
+            accept=".jpg,.jpeg,.png,.pdf,.ai,.psd"
+            multiple
+            data-upload-input
+          />
+          <div class="quote-form__upload-content">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="quote-form__upload-icon">
+              <path d="M16 4v20M8 12l8-8 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 24v2a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="quote-form__upload-text">클릭하거나 파일을 드래그하세요</p>
+            <p class="quote-form__upload-hint">JPG, PNG, PDF, AI, PSD (최대 10MB)</p>
+          </div>
+        </div>
+        <div class="quote-form__upload-preview" data-upload-preview></div>
+      </div>
+
+      <!-- Privacy Agreement -->
+      <div class="quote-form__checkbox">
+        <input
+          type="checkbox"
+          id="quote-privacy"
+          name="privacy"
+          required
+        />
+        <label for="quote-privacy">
+          개인정보 수집 및 이용에 동의합니다 <span class="required">*</span>
+        </label>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="quote-form__submit">
+        <span>견적 요청하기</span>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Success Message -->
+      <div class="quote-form__message quote-form__message--success" data-success-message style="display: none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>견적 문의가 성공적으로 전송되었습니다. 빠른 시일 내에 연락드리겠습니다.</p>
+      </div>
+
+      <!-- Error Message -->
+      <div class="quote-form__message quote-form__message--error" data-error-message style="display: none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>전송 중 오류가 발생했습니다. 다시 시도해주세요.</p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .quote-form {
+    position: relative;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2xl);
+  }
+
+  .quote-form__container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .quote-form__header {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+  }
+
+  .quote-form__title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+  }
+
+  .quote-form__description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+  }
+
+  /* Form */
+  .quote-form__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .quote-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .quote-form__label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .required {
+    color: var(--error);
+  }
+
+  .quote-form__input,
+  .quote-form__textarea {
+    width: 100%;
+    padding: var(--space-md);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    transition: all var(--transition-base);
+  }
+
+  .quote-form__input:focus,
+  .quote-form__textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 77, 46, 0.1);
+  }
+
+  .quote-form__input::placeholder,
+  .quote-form__textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  .quote-form__input:read-only {
+    background: var(--surface-light);
+    cursor: not-allowed;
+  }
+
+  .quote-form__textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  .quote-form__select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23B0B0B0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-md) center;
+    padding-right: 40px;
+  }
+
+  .quote-form__field-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: calc(var(--space-xs) * -1);
+    margin-bottom: var(--space-xs);
+  }
+
+  .quote-form__checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  /* File Upload */
+  .quote-form__upload {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-xl);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--background);
+  }
+
+  .quote-form__upload:hover,
+  .quote-form__upload.is-dragover {
+    border-color: var(--primary);
+    background: rgba(26, 77, 46, 0.05);
+  }
+
+  .quote-form__upload-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .quote-form__upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    pointer-events: none;
+  }
+
+  .quote-form__upload-icon {
+    color: var(--text-muted);
+  }
+
+  .quote-form__upload-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .quote-form__upload-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+  }
+
+  .quote-form__upload-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+
+  .quote-form__upload-preview:empty {
+    display: none;
+  }
+
+  .quote-form__file-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+  }
+
+  .quote-form__file-item img {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+  }
+
+  .quote-form__file-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: color var(--transition-base);
+  }
+
+  .quote-form__file-remove:hover {
+    color: var(--error);
+  }
+
+  /* Checkbox */
+  .quote-form__checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .quote-form__checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+
+  .quote-form__checkbox label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  /* Submit Button */
+  .quote-form__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-xl);
+    background: var(--primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .quote-form__submit:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(26, 77, 46, 0.3);
+  }
+
+  .quote-form__submit:active {
+    transform: translateY(0);
+  }
+
+  /* Messages */
+  .quote-form__message {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+  }
+
+  .quote-form__message svg {
+    flex-shrink: 0;
+  }
+
+  .quote-form__message--success {
+    background: rgba(72, 187, 120, 0.1);
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+
+  .quote-form__message--error {
+    background: rgba(245, 101, 101, 0.1);
+    color: var(--error);
+    border: 1px solid var(--error);
+  }
+
+  /* Responsive */
+  @media (max-width: 719px) {
+    .quote-form {
+      padding: var(--space-xl);
+    }
+
+    .quote-form__title {
+      font-size: var(--font-size-xl);
+    }
+  }
+</style>
+
+<script>
+  import { supabaseBrowser } from '../../lib/supabase-browser';
+
+  // Quote Form Submission
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('[data-quote-form-element]') as HTMLFormElement;
+    if (!form) return;
+
+    const successMessage = document.querySelector('[data-success-message]') as HTMLElement;
+    const errorMessage = document.querySelector('[data-error-message]') as HTMLElement;
+
+    // File Upload Handling
+    const uploadArea = document.querySelector('[data-upload-area]') as HTMLElement;
+    const uploadInput = document.querySelector('[data-upload-input]') as HTMLInputElement;
+    const uploadPreview = document.querySelector('[data-upload-preview]') as HTMLElement;
+    let uploadedFiles: File[] = [];
+
+    if (uploadArea && uploadInput && uploadPreview) {
+      // Drag & drop events
+      ['dragenter', 'dragover'].forEach(evt => {
+        uploadArea.addEventListener(evt, (e) => {
+          e.preventDefault();
+          uploadArea.classList.add('is-dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(evt => {
+        uploadArea.addEventListener(evt, (e) => {
+          e.preventDefault();
+          uploadArea.classList.remove('is-dragover');
+        });
+      });
+
+      uploadArea.addEventListener('drop', (e: DragEvent) => {
+        const files = e.dataTransfer?.files;
+        if (files) handleFiles(files);
+      });
+
+      uploadInput.addEventListener('change', () => {
+        if (uploadInput.files) handleFiles(uploadInput.files);
+      });
+
+      function handleFiles(files: FileList) {
+        const allowed = ['.jpg', '.jpeg', '.png', '.pdf', '.ai', '.psd'];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+
+        Array.from(files).forEach(file => {
+          const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+          if (!allowed.includes(ext)) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(`지원하지 않는 파일 형식: ${ext}`, 'error');
+            }
+            return;
+          }
+          if (file.size > maxSize) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(`파일 크기 초과 (최대 10MB): ${file.name}`, 'error');
+            }
+            return;
+          }
+          uploadedFiles.push(file);
+        });
+
+        renderPreview();
+      }
+
+      function renderPreview() {
+        uploadPreview.innerHTML = '';
+        uploadedFiles.forEach((file, idx) => {
+          const item = document.createElement('div');
+          item.className = 'quote-form__file-item';
+
+          const isImage = file.type.startsWith('image/');
+          if (isImage) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.alt = file.name;
+            item.appendChild(img);
+          }
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+          item.appendChild(nameSpan);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'quote-form__file-remove';
+          removeBtn.textContent = '✕';
+          removeBtn.addEventListener('click', () => {
+            uploadedFiles.splice(idx, 1);
+            renderPreview();
+          });
+          item.appendChild(removeBtn);
+
+          uploadPreview.appendChild(item);
+        });
+      }
+    }
+
+    // Site Photos Upload Handling
+    const uploadAreaSite = document.querySelector('[data-upload-area-site]') as HTMLElement;
+    const uploadInputSite = document.querySelector('[data-upload-input-site]') as HTMLInputElement;
+    const uploadPreviewSite = document.querySelector('[data-upload-preview-site]') as HTMLElement;
+    let uploadedSitePhotos: File[] = [];
+
+    if (uploadAreaSite && uploadInputSite && uploadPreviewSite) {
+      // Drag & drop events
+      ['dragenter', 'dragover'].forEach(evt => {
+        uploadAreaSite.addEventListener(evt, (e) => {
+          e.preventDefault();
+          uploadAreaSite.classList.add('is-dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(evt => {
+        uploadAreaSite.addEventListener(evt, (e) => {
+          e.preventDefault();
+          uploadAreaSite.classList.remove('is-dragover');
+        });
+      });
+
+      uploadAreaSite.addEventListener('drop', (e: DragEvent) => {
+        const files = e.dataTransfer?.files;
+        if (files) handleSitePhotos(files);
+      });
+
+      uploadInputSite.addEventListener('change', () => {
+        if (uploadInputSite.files) handleSitePhotos(uploadInputSite.files);
+      });
+
+      function handleSitePhotos(files: FileList) {
+        const allowed = ['.jpg', '.jpeg', '.png'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        Array.from(files).forEach(file => {
+          const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+          if (!allowed.includes(ext)) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(`지원하지 않는 파일 형식: ${ext}`, 'error');
+            }
+            return;
+          }
+          if (file.size > maxSize) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(`파일 크기 초과 (최대 5MB): ${file.name}`, 'error');
+            }
+            return;
+          }
+          uploadedSitePhotos.push(file);
+        });
+
+        renderSitePreview();
+      }
+
+      function renderSitePreview() {
+        uploadPreviewSite.innerHTML = '';
+        uploadedSitePhotos.forEach((file, idx) => {
+          const item = document.createElement('div');
+          item.className = 'quote-form__file-item';
+
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          img.alt = file.name;
+          item.appendChild(img);
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+          item.appendChild(nameSpan);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'quote-form__file-remove';
+          removeBtn.textContent = '✕';
+          removeBtn.addEventListener('click', () => {
+            uploadedSitePhotos.splice(idx, 1);
+            renderSitePreview();
+          });
+          item.appendChild(removeBtn);
+
+          uploadPreviewSite.appendChild(item);
+        });
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Hide previous messages
+      if (successMessage) successMessage.style.display = 'none';
+      if (errorMessage) errorMessage.style.display = 'none';
+
+      // Validate site photos
+      if (uploadedSitePhotos.length === 0) {
+        if (typeof window.showToast === 'function') {
+          window.showToast('현장 사진을 최소 1장 이상 업로드해주세요', 'error');
+        }
+        if (errorMessage) {
+          errorMessage.querySelector('p')!.textContent = '현장 사진을 최소 1장 이상 업로드해주세요.';
+          errorMessage.style.display = 'flex';
+          errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        return;
+      }
+
+      // Get form data
+      const formData = new FormData(form);
+      // Append uploaded files
+      uploadedFiles.forEach(file => {
+        formData.append('attachments', file);
+      });
+      // Append site photos
+      uploadedSitePhotos.forEach(file => {
+        formData.append('sitePhotos', file);
+      });
+      const data = Object.fromEntries(formData.entries());
+
+      // Supabase에 견적 요청 저장
+      try {
+        const customerName = (data.name as string || '').trim();
+        const email = (data.email as string || '').trim();
+        const phone = (data.phone as string || '').trim();
+        const product = (data.product as string || '').trim();
+        const size = (data.size as string || '').trim();
+        const address = (data.address as string || '').trim();
+        const floor = (data.floor as string || '').trim();
+        const crane = data.crane === 'yes';
+        const designFile = data.designFile === 'yes';
+        const message = (data.message as string || '').trim();
+
+        const { error: insertError } = await supabaseBrowser
+          .from('quote_requests')
+          .insert({
+            customer_name: customerName,
+            email: email || null,
+            phone: phone || null,
+            request_type: product || '견적 문의',
+            message: [
+              message,
+              size ? `[사이즈] ${size}` : '',
+              address ? `[현장주소] ${address}` : '',
+              floor ? `[설치층수] ${floor}` : '',
+              crane ? '[크레인 필요]' : '',
+              designFile ? '[디자인파일 보유]' : '',
+            ].filter(Boolean).join('\n'),
+            products: product ? [{ name: product }] : [],
+            attachments: [],
+          });
+
+        if (insertError) throw insertError;
+
+        // Show success message
+        if (successMessage) {
+          successMessage.style.display = 'flex';
+          form.reset();
+          uploadedFiles = [];
+          uploadedSitePhotos = [];
+          if (uploadPreview) uploadPreview.innerHTML = '';
+          if (uploadPreviewSite) uploadPreviewSite.innerHTML = '';
+
+          // Scroll to success message
+          successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (error) {
+        // Show error message
+        if (errorMessage) {
+          errorMessage.style.display = 'flex';
+          errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        console.error('Quote submission error:', error);
+      }
+    });
+  });
+</script>

@@ -1,0 +1,1106 @@
+---
+export const prerender = false;
+
+/**
+ * 주문 내역 페이지
+ * List of all orders with status badges, item summaries, amounts
+ */
+
+import Layout from '../../../layouts/Layout.astro';
+import ShopNavbar from '../../../components/shop/ShopNavbar.astro';
+import ShopFooter from '../../../components/shop/ShopFooter.astro';
+import { createAstroServerClient } from '../../../lib/supabase-server';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/shop/login?redirect=/shop/mypage/orders');
+}
+
+const userId = user.id;
+const userEmail = user.email ?? '';
+const { supabase } = createAstroServerClient(Astro.request);
+
+const debugLog: string[] = [];
+debugLog.push(`userId: ${userId}`);
+debugLog.push(`userEmail: ${userEmail}`);
+
+let ordersResult = await supabase
+  .from('orders')
+  .select('*')
+  .eq('user_id' as never, userId as never)
+  .order('created_at' as never, { ascending: false });
+
+debugLog.push(`user_id query error: ${JSON.stringify(ordersResult.error)}`);
+debugLog.push(`user_id query count: ${ordersResult.data?.length ?? 0}`);
+
+let orders = (ordersResult.data as Array<Record<string, any>> | null) ?? [];
+
+if (orders.length === 0 && userEmail) {
+  debugLog.push(`fallback to email: ${userEmail}`);
+  ordersResult = await supabase
+    .from('orders')
+    .select('*')
+    .eq('customer_email' as never, userEmail as never)
+    .order('created_at' as never, { ascending: false });
+  debugLog.push(`email query error: ${JSON.stringify(ordersResult.error)}`);
+  debugLog.push(`email query count: ${ordersResult.data?.length ?? 0}`);
+  orders = (ordersResult.data as Array<Record<string, any>> | null) ?? [];
+}
+
+debugLog.push(`final orders count: ${orders.length}`);
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('ko-KR').format(amount);
+}
+
+function getStatusInfo(status: string): { label: string; className: string } {
+  const map: Record<string, { label: string; className: string }> = {
+    pending: { label: '주문 대기', className: 'orders__status--pending' },
+    pending_payment: { label: '결제 대기', className: 'orders__status--pending' },
+    paid: { label: '결제 완료', className: 'orders__status--paid' },
+    shipped: { label: '배송 중', className: 'orders__status--shipped' },
+    delivered: { label: '배송 완료', className: 'orders__status--delivered' },
+    cancelled: { label: '취소됨', className: 'orders__status--cancelled' },
+    refund_pending: { label: '환불 처리 중', className: 'orders__status--refunded' },
+    refunded: { label: '환불 완료', className: 'orders__status--refunded' },
+  };
+  return map[status] || { label: status, className: 'orders__status--pending' };
+}
+
+function getItemSummary(items: any): string {
+  if (!items || !Array.isArray(items)) return '상품 정보 없음';
+  if (items.length === 0) return '상품 정보 없음';
+  const firstName = items[0]?.name || items[0]?.product_name || '상품';
+  if (items.length === 1) return firstName;
+  return `${firstName} 외 ${items.length - 1}건`;
+}
+---
+
+<Layout title="주문 내역 | issac.design" description="주문 내역을 확인합니다.">
+  <script is:inline>document.body.classList.add('preloader-ready');</script>
+  <ShopNavbar />
+
+  <main class="orders">
+    <div class="orders__container">
+      <a href="/shop/mypage" class="orders__back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+        마이페이지
+      </a>
+
+      <h1 class="orders__heading">주문 내역</h1>
+
+      <script is:inline define:vars={{ debugLog }}>
+        console.log('[orders.astro] DEBUG:', debugLog);
+        debugLog.forEach(log => console.log('[orders.astro]', log));
+      </script>
+
+      <!-- 환불 사유 다이얼로그 -->
+      <div class="refund-dialog__overlay" id="refund-dialog" style="display:none;">
+        <div class="refund-dialog">
+          <div class="refund-dialog__header">
+            <h3 class="refund-dialog__title">환불 사유 선택</h3>
+            <button class="refund-dialog__close" id="refund-dialog-close" type="button" aria-label="닫기">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <p class="refund-dialog__desc">환불 사유를 선택해주세요.</p>
+
+          <div class="refund-dialog__options" id="refund-reasons">
+            <label class="refund-dialog__option">
+              <input type="radio" name="refund_reason" value="단순 변심" />
+              <span class="refund-dialog__radio"></span>
+              <span>단순 변심</span>
+            </label>
+            <label class="refund-dialog__option">
+              <input type="radio" name="refund_reason" value="제품 불량 / 파손" />
+              <span class="refund-dialog__radio"></span>
+              <span>제품 불량 / 파손</span>
+            </label>
+            <label class="refund-dialog__option">
+              <input type="radio" name="refund_reason" value="오배송 (다른 제품 수령)" />
+              <span class="refund-dialog__radio"></span>
+              <span>오배송 (다른 제품 수령)</span>
+            </label>
+            <label class="refund-dialog__option">
+              <input type="radio" name="refund_reason" value="배송 지연" />
+              <span class="refund-dialog__radio"></span>
+              <span>배송 지연</span>
+            </label>
+            <label class="refund-dialog__option">
+              <input type="radio" name="refund_reason" value="제품이 설명과 다름" />
+              <span class="refund-dialog__radio"></span>
+              <span>제품이 설명과 다름</span>
+            </label>
+            <label class="refund-dialog__option refund-dialog__option--other">
+              <input type="radio" name="refund_reason" value="기타" id="refund-reason-other" />
+              <span class="refund-dialog__radio"></span>
+              <span>기타</span>
+            </label>
+            <textarea
+              class="refund-dialog__textarea"
+              id="refund-reason-text"
+              placeholder="환불 사유를 직접 입력해주세요"
+              maxlength="200"
+              style="display:none;"
+            ></textarea>
+          </div>
+
+          <div class="refund-dialog__footer">
+            <button class="refund-dialog__btn refund-dialog__btn--cancel" id="refund-dialog-cancel" type="button">취소</button>
+            <button class="refund-dialog__btn refund-dialog__btn--submit" id="refund-dialog-submit" type="button" disabled>환불 요청</button>
+          </div>
+        </div>
+      </div>
+
+      {orders.length === 0 ? (
+        <div class="orders__empty">
+          <div class="orders__empty-icon">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z"/>
+              <path d="M3 6h18"/>
+              <path d="M16 10a4 4 0 01-8 0"/>
+            </svg>
+          </div>
+          <h2 class="orders__empty-title">아직 주문 내역이 없습니다</h2>
+          <p class="orders__empty-desc">다양한 제품을 둘러보고 첫 주문을 시작해보세요.</p>
+          <a href="/shop" class="orders__empty-btn">제품 보러가기</a>
+        </div>
+      ) : (
+        <div class="orders__list">
+          <p class="orders__count">총 <strong>{orders.length}</strong>건</p>
+
+          {orders.map((order) => {
+            const statusInfo = getStatusInfo(order.status);
+            const items = Array.isArray(order.items) ? order.items : [];
+            return (
+              <div class="orders__card" data-order-card data-order-id={order.id} data-order-status={order.status}>
+                <button class="orders__card-toggle" type="button" aria-expanded="false">
+                  <div class="orders__card-header">
+                    <div class="orders__card-meta">
+                      <span class="orders__order-number">{order.order_number}</span>
+                      <span class="orders__date">{formatDate(order.created_at)}</span>
+                    </div>
+                    <div class="orders__card-header-right">
+                      <span class={`orders__status ${statusInfo.className}`} data-status-badge>
+                        {statusInfo.label}
+                      </span>
+                      <svg class="orders__chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 6l4 4 4-4"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div class="orders__card-body">
+                    <p class="orders__item-summary">{getItemSummary(order.items)}</p>
+                    <p class="orders__amount">{formatAmount(order.total_amount)}<span class="orders__currency">원</span></p>
+                  </div>
+                </button>
+
+                <div class="orders__detail" data-order-detail>
+                  <div class="orders__detail-section">
+                    <h3 class="orders__detail-heading">주문 상품</h3>
+                    {items.length > 0 ? (
+                      <ul class="orders__detail-items">
+                        {items.map((itm: any) => (
+                          <li class="orders__detail-item">
+                            <span class="orders__detail-item-name">{itm.name || itm.product_name || '상품'}</span>
+                            <span class="orders__detail-item-info">
+                              {itm.quantity && <span>수량: {itm.quantity}</span>}
+                              {itm.unit_price && <span>{formatAmount(itm.unit_price)}원</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p class="orders__detail-empty">상품 정보가 없습니다.</p>
+                    )}
+                  </div>
+
+                  <div class="orders__detail-section">
+                    <h3 class="orders__detail-heading">주문 정보</h3>
+                    <div class="orders__detail-row">
+                      <span class="orders__detail-label">주문자</span>
+                      <span class="orders__detail-value">{order.customer_name || '-'}</span>
+                    </div>
+                    {order.customer_phone && (
+                      <div class="orders__detail-row">
+                        <span class="orders__detail-label">연락처</span>
+                        <span class="orders__detail-value">{order.customer_phone}</span>
+                      </div>
+                    )}
+                    <div class="orders__detail-row">
+                      <span class="orders__detail-label">결제 금액</span>
+                      <span class="orders__detail-value orders__detail-value--bold">{formatAmount(order.total_amount)}원</span>
+                    </div>
+                  </div>
+
+                  {order.status === 'paid' && (
+                    <div class="orders__detail-actions">
+                      <button
+                        class="orders__refund-btn"
+                        data-order-id={order.id}
+                        data-payment-amount={order.total_amount}
+                        type="button"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="1 4 1 10 7 10"/>
+                          <path d="M3.51 15a9 9 0 105.64-11.36L1 10"/>
+                        </svg>
+                        환불 요청
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </main>
+
+  <ShopFooter />
+</Layout>
+
+<style>
+  .orders {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    padding: calc(var(--header-height) + var(--space-2xl)) var(--container-padding) var(--space-3xl);
+  }
+
+  .orders__container {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .orders__back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: var(--space-lg);
+    transition: color var(--transition-base);
+  }
+
+  .orders__back:hover {
+    color: var(--text-primary);
+  }
+
+  .orders__heading {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xl);
+    letter-spacing: -0.02em;
+  }
+
+  /* Empty State */
+  .orders__empty {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-xl);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+
+  .orders__empty-icon {
+    color: var(--text-muted);
+    margin-bottom: var(--space-lg);
+    opacity: 0.5;
+  }
+
+  .orders__empty-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+  }
+
+  .orders__empty-desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--space-xl);
+    line-height: 1.5;
+  }
+
+  .orders__empty-btn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--primary);
+    border-radius: var(--radius-md);
+    color: #fff;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .orders__empty-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 77, 46, 0.3);
+  }
+
+  /* Order List */
+  .orders__count {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--space-md);
+  }
+
+  .orders__count strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .orders__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .orders__card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+    overflow: hidden;
+  }
+
+  .orders__card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .orders__card--expanded {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .orders__card-toggle {
+    display: block;
+    width: 100%;
+    padding: var(--space-lg) var(--space-xl);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+  }
+
+  .orders__card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+
+  .orders__card-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+  }
+
+  .orders__chevron {
+    color: var(--text-muted);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+  }
+
+  .orders__card--expanded .orders__chevron {
+    transform: rotate(180deg);
+  }
+
+  .orders__card-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    min-width: 0;
+  }
+
+  .orders__order-number {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .orders__date {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* Status Badges */
+  .orders__status {
+    display: inline-block;
+    padding: 2px var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .orders__status--pending {
+    background: rgba(234, 179, 8, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(234, 179, 8, 0.25);
+  }
+
+  .orders__status--paid {
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .orders__status--shipped {
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+
+  .orders__status--delivered {
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .orders__status--cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .orders__card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .orders__item-summary {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .orders__amount {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .orders__currency {
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 2px;
+  }
+
+  /* ---- Order Detail (Expandable) ---- */
+  .orders__detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+  }
+
+  .orders__card--expanded .orders__detail {
+    grid-template-rows: 1fr;
+  }
+
+  .orders__detail > * {
+    overflow: hidden;
+  }
+
+  .orders__detail-section {
+    padding: 0 var(--space-xl);
+    margin-bottom: var(--space-md);
+  }
+
+  .orders__detail-section:first-child {
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border);
+  }
+
+  .orders__detail-heading {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-sm);
+  }
+
+  .orders__detail-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .orders__detail-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+  }
+
+  .orders__detail-item-name {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .orders__detail-item-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .orders__detail-empty {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .orders__detail-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+  }
+
+  .orders__detail-row + .orders__detail-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .orders__detail-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+  }
+
+  .orders__detail-value {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+
+  .orders__detail-value--bold {
+    font-weight: 700;
+  }
+
+  .orders__detail-actions {
+    padding: var(--space-sm) var(--space-xl) var(--space-lg);
+  }
+
+  .orders__refund-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-lg);
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .orders__refund-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .orders__refund-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Refunded status */
+  .orders__status--refunded {
+    background: rgba(168, 85, 247, 0.1);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+
+  @media (max-width: 719px) {
+    .orders {
+      padding-top: calc(var(--header-height-mobile) + var(--space-xl));
+    }
+
+    .orders__card-toggle {
+      padding: var(--space-md) var(--space-lg);
+    }
+
+    .orders__card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-sm);
+    }
+
+    .orders__card-header-right {
+      align-self: flex-end;
+    }
+
+    .orders__card-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-xs);
+    }
+
+    .orders__card-body {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-sm);
+    }
+
+    .orders__amount {
+      font-size: var(--font-size-base);
+    }
+
+    .orders__detail-section {
+      padding: 0 var(--space-lg);
+    }
+
+    .orders__detail-actions {
+      padding: var(--space-sm) var(--space-lg) var(--space-md);
+    }
+
+    .orders__detail-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+  }
+</style>
+
+<script>
+  function initOrdersPage() {
+    // ---- Toggle expansion ----
+    document.querySelectorAll<HTMLButtonElement>('.orders__card-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('[data-order-card]');
+        if (!card) return;
+        const isExpanded = card.classList.toggle('orders__card--expanded');
+        btn.setAttribute('aria-expanded', String(isExpanded));
+      });
+    });
+
+    // ---- Refund dialog setup ----
+    const dialog = document.getElementById('refund-dialog') as HTMLDivElement | null;
+    const dialogCloseBtn = document.getElementById('refund-dialog-close') as HTMLButtonElement | null;
+    const dialogCancelBtn = document.getElementById('refund-dialog-cancel') as HTMLButtonElement | null;
+    const dialogSubmitBtn = document.getElementById('refund-dialog-submit') as HTMLButtonElement | null;
+    const reasonOtherRadio = document.getElementById('refund-reason-other') as HTMLInputElement | null;
+    const reasonTextarea = document.getElementById('refund-reason-text') as HTMLTextAreaElement | null;
+    const allRadios = document.querySelectorAll<HTMLInputElement>('input[name="refund_reason"]');
+
+    let pendingRefund: { orderId: string; amount: number; btn: HTMLButtonElement } | null = null;
+
+    function openDialog(orderId: string, amount: number, btn: HTMLButtonElement) {
+      pendingRefund = { orderId, amount, btn };
+      // reset state
+      allRadios.forEach(r => (r.checked = false));
+      if (reasonTextarea) { reasonTextarea.value = ''; reasonTextarea.style.display = 'none'; }
+      if (dialogSubmitBtn) dialogSubmitBtn.disabled = true;
+      if (dialog) { dialog.style.display = 'flex'; requestAnimationFrame(() => dialog.classList.add('refund-dialog__overlay--active')); }
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDialog() {
+      if (dialog) { dialog.classList.remove('refund-dialog__overlay--active'); setTimeout(() => { dialog.style.display = 'none'; }, 200); }
+      document.body.style.overflow = '';
+      pendingRefund = null;
+    }
+
+    function getSelectedReason(): string | null {
+      const checked = document.querySelector<HTMLInputElement>('input[name="refund_reason"]:checked');
+      if (!checked) return null;
+      if (checked.value === '기타') {
+        const text = reasonTextarea?.value.trim();
+        return text ? `기타: ${text}` : null;
+      }
+      return checked.value;
+    }
+
+    // radio change → toggle textarea, enable submit
+    allRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        const isOther = reasonOtherRadio?.checked;
+        if (reasonTextarea) reasonTextarea.style.display = isOther ? 'block' : 'none';
+        if (dialogSubmitBtn) {
+          if (isOther) {
+            dialogSubmitBtn.disabled = !reasonTextarea?.value.trim();
+          } else {
+            dialogSubmitBtn.disabled = false;
+          }
+        }
+      });
+    });
+
+    // textarea input → enable/disable submit when "기타" selected
+    reasonTextarea?.addEventListener('input', () => {
+      if (reasonOtherRadio?.checked && dialogSubmitBtn) {
+        dialogSubmitBtn.disabled = !reasonTextarea.value.trim();
+      }
+    });
+
+    dialogCloseBtn?.addEventListener('click', closeDialog);
+    dialogCancelBtn?.addEventListener('click', closeDialog);
+    dialog?.addEventListener('click', (e) => { if (e.target === dialog) closeDialog(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dialog?.style.display !== 'none') closeDialog(); });
+
+    // ---- Submit refund ----
+    dialogSubmitBtn?.addEventListener('click', async () => {
+      if (!pendingRefund) return;
+      const reason = getSelectedReason();
+      if (!reason) return;
+
+      const { orderId, amount, btn } = pendingRefund;
+      const formattedAmount = new Intl.NumberFormat('ko-KR').format(amount);
+      const confirmed = window.confirm(
+        `${formattedAmount}원을 환불 요청하시겠습니까?\n사유: ${reason}\n\n환불 처리는 결제 수단에 따라 1~5영업일이 소요될 수 있습니다.`
+      );
+      if (!confirmed) return;
+
+      closeDialog();
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `
+        <svg class="orders__refund-spinner" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="8" stroke-linecap="round"/>
+        </svg>
+        처리 중...
+      `;
+
+      try {
+        const res = await fetch('/api/payment/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId, amount, reason }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (res.ok && data?.success) {
+          const card = btn.closest('[data-order-card]');
+          if (card) {
+            const badge = card.querySelector('[data-status-badge]');
+            if (badge) { badge.className = 'orders__status orders__status--refunded'; badge.textContent = '환불됨'; }
+            card.setAttribute('data-order-status', 'refunded');
+          }
+          const actionsEl = btn.closest('.orders__detail-actions');
+          if (actionsEl) {
+            actionsEl.innerHTML = '<p style="font-size:var(--font-size-sm);color:#c084fc;">환불이 요청되었습니다.</p>';
+          }
+          alert('환불 요청이 완료되었습니다.');
+        } else {
+          const errorMsg = data?.error?.message || (typeof data?.error === 'string' ? data.error : null) || data?.message || '환불 처리 중 오류가 발생했습니다.';
+          alert(`환불 실패: ${errorMsg}`);
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      } catch {
+        alert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+
+    // ---- Refund buttons → open dialog ----
+    document.querySelectorAll<HTMLButtonElement>('.orders__refund-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const orderId = btn.dataset.orderId;
+        const amount = Number(btn.dataset.paymentAmount);
+        if (!orderId || !amount) return;
+        openDialog(orderId, amount, btn);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initOrdersPage);
+  } else {
+    initOrdersPage();
+  }
+</script>
+
+<style>
+  @keyframes orders-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  :global(.orders__refund-spinner) {
+    animation: orders-spin 0.8s linear infinite;
+  }
+
+  /* ---- Refund Reason Dialog ---- */
+  .refund-dialog__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    transition: background 0.2s ease, backdrop-filter 0.2s ease;
+    padding: var(--space-lg);
+  }
+
+  .refund-dialog__overlay--active {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .refund-dialog {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-secondary, #1a1a1a);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: var(--radius-xl, 16px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+    transform: translateY(12px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    overflow: hidden;
+  }
+
+  .refund-dialog__overlay--active .refund-dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  .refund-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg, 20px) var(--space-xl, 24px) 0;
+  }
+
+  .refund-dialog__title {
+    font-size: var(--font-size-lg, 18px);
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    letter-spacing: -0.02em;
+  }
+
+  .refund-dialog__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    color: var(--text-muted, #888);
+    cursor: pointer;
+    border-radius: var(--radius-sm, 6px);
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .refund-dialog__close:hover {
+    color: var(--text-primary, #fff);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .refund-dialog__desc {
+    font-size: var(--font-size-sm, 14px);
+    color: var(--text-muted, #888);
+    padding: var(--space-sm, 8px) var(--space-xl, 24px) 0;
+    line-height: 1.5;
+  }
+
+  .refund-dialog__options {
+    padding: var(--space-md, 16px) var(--space-xl, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .refund-dialog__option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 10px);
+    padding: var(--space-sm, 10px) var(--space-md, 12px);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    font-size: var(--font-size-sm, 14px);
+    color: var(--text-secondary, #ccc);
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+
+  .refund-dialog__option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary, #fff);
+  }
+
+  .refund-dialog__option input[type="radio"] {
+    display: none;
+  }
+
+  .refund-dialog__radio {
+    position: relative;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transition: border-color 0.15s;
+  }
+
+  .refund-dialog__radio::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--primary, #1a4d2e);
+    transform: scale(0);
+    transition: transform 0.15s ease;
+  }
+
+  .refund-dialog__option input[type="radio"]:checked ~ .refund-dialog__radio {
+    border-color: var(--primary, #1a4d2e);
+  }
+
+  .refund-dialog__option input[type="radio"]:checked ~ .refund-dialog__radio::after {
+    transform: scale(1);
+  }
+
+  .refund-dialog__option input[type="radio"]:checked ~ span:last-child {
+    color: var(--text-primary, #fff);
+    font-weight: 500;
+  }
+
+  .refund-dialog__textarea {
+    width: 100%;
+    min-height: 72px;
+    max-height: 120px;
+    padding: var(--space-sm, 10px) var(--space-md, 12px);
+    margin-top: var(--space-xs, 4px);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-primary, #fff);
+    font-size: var(--font-size-sm, 14px);
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+    line-height: 1.5;
+  }
+
+  .refund-dialog__textarea::placeholder {
+    color: var(--text-muted, #666);
+  }
+
+  .refund-dialog__textarea:focus {
+    border-color: var(--primary, #1a4d2e);
+  }
+
+  .refund-dialog__footer {
+    display: flex;
+    gap: var(--space-sm, 8px);
+    padding: 0 var(--space-xl, 24px) var(--space-lg, 20px);
+    justify-content: flex-end;
+  }
+
+  .refund-dialog__btn {
+    padding: var(--space-sm, 10px) var(--space-xl, 20px);
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+  }
+
+  .refund-dialog__btn--cancel {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary, #ccc);
+  }
+
+  .refund-dialog__btn--cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary, #fff);
+  }
+
+  .refund-dialog__btn--submit {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .refund-dialog__btn--submit:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  .refund-dialog__btn--submit:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 719px) {
+    .refund-dialog__overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .refund-dialog {
+      max-width: 100%;
+      border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+      transform: translateY(100%);
+    }
+
+    .refund-dialog__overlay--active .refund-dialog {
+      transform: translateY(0);
+    }
+  }
+</style>

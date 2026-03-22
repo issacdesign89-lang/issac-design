@@ -1,0 +1,44 @@
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+.vercel
+.env*.local
+
+# Video originals (unoptimized)
+public/videos/hero[0-9].mp4
+
+# Development screenshots & reference images
+*.png
+!public/**/*.png
+!src/**/*.png
+
+# Backup files
+*.backup
+*.old
+
+# Development docs
+docs/
+
+# Blog draft folder (root level only, not src/content/blog or src/assets/blog)
+/blog/

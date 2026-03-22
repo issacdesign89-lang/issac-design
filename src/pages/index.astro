@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Preloader from '../components/ui/Preloader.astro';
+import LandingNavbar from '../components/ui/LandingNavbar.astro';
+import SectionIndicator from '../components/ui/SectionIndicator.astro';
+import FloatingButton from '../components/ui/FloatingButton.astro';
+import Hero from '../components/sections/Hero.astro';
+import Services from '../components/sections/Services.astro';
+import Portfolio from '../components/sections/Portfolio.astro';
+import SignageTypes from '../components/sections/SignageTypes.astro';
+import ClientShowcase from '../components/sections/ClientShowcase.astro';
+import FAQ from '../components/sections/FAQ.astro';
+import Contact from '../components/sections/Contact.astro';
+import Footer from '../components/sections/Footer.astro';
+import ScrollProgress from '../components/ScrollProgress.astro';
+import ClientLogos from '../components/shop/ClientLogos.astro';
+---
+
+<Layout
+  title="issac.design - LED Signage & Advertising Design"
+  description="issac.design - LED Signage, Neon Sign, Outdoor Advertising. 감각적인 디자인과 정교한 제작으로 브랜드를 빛내는 사이니지 스튜디오."
+>
+  <Preloader />
+  <ScrollProgress />
+  <LandingNavbar />
+  <SectionIndicator />
+
+  <main id="main-content">
+    <div id="hero">
+      <Hero />
+    </div>
+    <div id="client-logos">
+      <ClientLogos />
+    </div>
+    <div id="services">
+      <Services />
+    </div>
+    <div id="portfolio">
+      <Portfolio />
+    </div>
+    <div id="signage-types">
+      <SignageTypes />
+    </div>
+    <div id="creative-works">
+      <ClientShowcase />
+    </div>
+    <div id="faq">
+      <FAQ />
+    </div>
+    <div id="contact">
+      <Contact />
+    </div>
+  </main>
+  
+  <Footer />
+</Layout>

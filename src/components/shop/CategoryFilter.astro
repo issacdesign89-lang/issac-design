@@ -1,0 +1,245 @@
+---
+/**
+ * CategoryFilter Component
+ * Category filter tabs for shop
+ */
+
+interface Props {
+  categories: {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+  }[];
+}
+
+const { categories } = Astro.props;
+
+const allCategory = {
+  id: 'all',
+  name: '전체',
+  description: '모든 제품 보기',
+  icon: 'all'
+};
+
+const filterCategories = [allCategory, ...categories];
+---
+
+<div class="category-filter" data-category-filter>
+  <div class="category-filter__container">
+    <!-- Filter Header -->
+    <div class="category-filter__header">
+      <h2 class="category-filter__title">전체 제품</h2>
+      <p class="category-filter__description">모든 간판 제품을 둘러보고 원하는 제품을 선택하세요</p>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="category-filter__tabs">
+      {filterCategories.map((category, index) => (
+        <button
+          class={`category-filter__tab ${index === 0 ? 'active' : ''}`}
+          data-filter={category.id}
+          type="button"
+        >
+          <span class="category-filter__tab-name">{category.name}</span>
+          <span class="category-filter__tab-description">{category.description}</span>
+        </button>
+      ))}
+    </div>
+
+    <!-- Active Indicator -->
+    <div class="category-filter__indicator" data-filter-indicator></div>
+  </div>
+</div>
+
+<style>
+  .category-filter {
+    position: relative;
+    width: 100%;
+    margin-bottom: var(--space-xl);
+  }
+
+  .category-filter__container {
+    position: relative;
+    width: 100%;
+  }
+
+  /* Header */
+  .category-filter__header {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+  }
+
+  .category-filter__title {
+    font-size: var(--font-size-3xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+  }
+
+  .category-filter__description {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+  }
+
+  /* Tabs */
+  .category-filter__tabs {
+    position: relative;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.75rem;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .category-filter__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-filter__tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    width: 160px;
+    height: 75px;
+    flex-shrink: 0;
+  }
+
+  .category-filter__tab:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .category-filter__tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .category-filter__tab-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color var(--transition-base);
+    white-space: nowrap;
+    line-height: 1.3;
+    width: 100%;
+    text-align: center;
+  }
+
+  .category-filter__tab.active .category-filter__tab-name {
+    color: var(--text-primary);
+  }
+
+  .category-filter__tab-description {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    transition: color var(--transition-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    max-width: 140px;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .category-filter__tab.active .category-filter__tab-description {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Responsive */
+  @media (max-width: 1023px) {
+    .category-filter__tabs {
+      justify-content: flex-start;
+      padding: 0.75rem;
+    }
+
+    .category-filter__tab {
+      width: 140px;
+      height: 70px;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .category-filter__tab-name {
+      font-size: 0.8rem;
+    }
+
+    .category-filter__tab-description {
+      font-size: 0.6rem;
+      max-width: 120px;
+    }
+  }
+
+  @media (max-width: 719px) {
+    .category-filter__header {
+      margin-bottom: var(--space-xl);
+    }
+
+    .category-filter__title {
+      font-size: var(--font-size-2xl);
+    }
+
+    .category-filter__tabs {
+      justify-content: flex-start;
+      padding: 0.5rem;
+    }
+
+    .category-filter__tab {
+      width: 120px;
+      height: 65px;
+      padding: 0.5rem;
+    }
+
+    .category-filter__tab-name {
+      font-size: 0.75rem;
+    }
+
+    .category-filter__tab-description {
+      font-size: 0.55rem;
+      max-width: 100px;
+    }
+  }
+</style>
+
+<script>
+  // Category Filter Logic
+  document.addEventListener('DOMContentLoaded', () => {
+    const filter = document.querySelector('[data-category-filter]');
+    if (!filter) return;
+
+    const tabs = filter.querySelectorAll('.category-filter__tab');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const category = tab.getAttribute('data-filter');
+
+        // Update active state
+        tabs.forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        // Filter products (calls function from ProductGrid)
+        if (window.filterProducts && category) {
+          window.filterProducts(category);
+        }
+
+        // Scroll removed - category changes should not trigger scroll
+      });
+    });
+  });
+</script>

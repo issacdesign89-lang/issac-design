@@ -1,0 +1,185 @@
+---
+/**
+ * Shop Main Page
+ * Premium magazine-style landing with featured products, categories, and trust indicators
+ */
+
+import Layout from '../../layouts/Layout.astro';
+import ShopNavbar from '../../components/shop/ShopNavbar.astro';
+import ShopHero from '../../components/shop/ShopHero.astro';
+import FeaturedBento from '../../components/shop/FeaturedBento.astro';
+import NewArrivals from '../../components/shop/NewArrivals.astro';
+import CategoryFilter from '../../components/shop/CategoryFilter.astro';
+import ProductGrid from '../../components/shop/ProductGrid.astro';
+import ProcessTimeline from '../../components/shop/ProcessTimeline.astro';
+import TrustIndicators from '../../components/shop/TrustIndicators.astro';
+import SortControls from '../../components/shop/SortControls.astro';
+import QuickViewModal from '../../components/shop/QuickViewModal.astro';
+import ClientLogos from '../../components/shop/ClientLogos.astro';
+import ChatBot from '../../components/shop/ChatBot';
+import KakaoFloat from '../../components/shop/KakaoFloat.astro';
+import QuoteCartBadge from '../../components/shop/QuoteCartBadge.astro';
+import ShopFooter from '../../components/shop/ShopFooter.astro';
+import Toast from '../../components/shop/Toast.astro';
+import SearchOverlay from '../../components/shop/SearchOverlay.astro';
+import ShopAnimations from '../../components/shop/ShopAnimations.astro';
+import ScrollProgress from '../../components/ScrollProgress.astro';
+import WarrantyBadge from '../../components/shop/WarrantyBadge.astro';
+import SideIndex from '../../components/shop/SideIndex.astro';
+import { getProducts } from '../../lib/data-fetchers';
+
+const { products, categories } = await getProducts();
+---
+
+<Layout
+  title="issac.design - 쇼핑몰 | LED Signage & Banner Products"
+  description="LED Signage, Hanging Banner, X-Banner, Neon Sign 등 다양한 간판 제품을 만나보세요. 온라인 견적 문의 가능."
+>
+  <script is:inline>document.body.classList.add('preloader-ready');</script>
+  <ScrollProgress />
+  <ShopNavbar />
+  <Toast />
+  <SearchOverlay />
+  <SideIndex />
+
+  <main class="shop-page" id="main-content">
+    <!-- Shop Hero Section -->
+    <ShopHero />
+
+    <!-- Featured Products Bento Grid -->
+    <FeaturedBento />
+
+    <!-- New Arrivals -->
+    <NewArrivals />
+
+    <!-- All Products -->
+    <section class="shop-products" id="products">
+      <div class="shop-products__container">
+        <!-- Category Filter + Sort Controls -->
+        <div class="shop-products__controls">
+          <div class="shop-products__filter">
+            <CategoryFilter categories={categories} />
+          </div>
+          <SortControls />
+        </div>
+
+        <!-- Product Grid -->
+        <ProductGrid products={products} />
+      </div>
+    </section>
+
+    <!-- Order Process Timeline -->
+    <ProcessTimeline />
+
+    <!-- Trust Indicators -->
+    <TrustIndicators />
+
+    <!-- Warranty & Insurance Badges -->
+    <WarrantyBadge />
+
+    <!-- Client Logos Marquee -->
+    <ClientLogos />
+
+    <!-- Quote CTA -->
+    <section class="shop-quote-cta" data-quote-cta>
+      <div class="shop-quote-cta__container">
+        <h2 class="shop-quote-cta__title">원하는 제품을 찾지 못하셨나요?</h2>
+        <p class="shop-quote-cta__desc">
+          맞춤 제작도 가능합니다. 무료 견적을 받아보세요.
+        </p>
+        <a href="/shop/quote" class="shop-quote-cta__btn">무료 견적 문의하기</a>
+      </div>
+    </section>
+  </main>
+
+  <QuickViewModal />
+  <KakaoFloat />
+  <ChatBot client:load />
+  <QuoteCartBadge />
+  <ShopFooter />
+  <ShopAnimations />
+</Layout>
+
+<style>
+  .shop-page {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--background);
+  }
+
+  /* All Products Section */
+  .shop-products {
+    position: relative;
+    width: 100%;
+    padding: var(--space-4xl) 0;
+  }
+
+  .shop-products__container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  .shop-products__controls {
+    margin-bottom: var(--space-2xl);
+  }
+
+  .shop-products__filter {
+    margin-bottom: var(--space-sm);
+  }
+
+  /* Quote CTA */
+  .shop-quote-cta {
+    position: relative;
+    width: 100%;
+    padding: var(--space-4xl) 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .shop-quote-cta__container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  .shop-quote-cta__title {
+    font-size: var(--font-size-3xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
+  }
+
+  .shop-quote-cta__desc {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2xl);
+  }
+
+  .shop-quote-cta__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-md) var(--space-3xl);
+    background: var(--primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    transition: all var(--transition-base);
+  }
+
+  .shop-quote-cta__btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(26, 77, 46, 0.3);
+  }
+
+  /* Responsive */
+  @media (max-width: 719px) {
+    .shop-quote-cta__title {
+      font-size: var(--font-size-2xl);
+    }
+  }
+</style>

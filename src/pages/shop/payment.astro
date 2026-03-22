@@ -1,0 +1,374 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ShopNavbar from '../../components/shop/ShopNavbar.astro';
+import Breadcrumb from '../../components/shop/Breadcrumb.astro';
+import ShopFooter from '../../components/shop/ShopFooter.astro';
+import Toast from '../../components/shop/Toast.astro';
+import PaymentWidget from '../../components/payment/PaymentWidget';
+import OrderSummary from '../../components/payment/OrderSummary';
+
+const breadcrumbs = [
+  { label: '쇼핑몰', href: '/shop' },
+  { label: '결제' },
+];
+
+const clientKey = import.meta.env.PUBLIC_TOSS_CLIENT_KEY || 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
+---
+
+<Layout
+  title="결제 - issac.design Shop"
+  description="주문 결제를 진행합니다."
+>
+  <script is:inline>document.body.classList.add('preloader-ready');</script>
+  <ShopNavbar />
+  <Toast />
+
+  <main class="payment-page">
+    <div class="payment-page__breadcrumb">
+      <Breadcrumb items={breadcrumbs} />
+    </div>
+
+    <div class="payment-page__container">
+      <h1 class="payment-page__title">결제</h1>
+
+      <div class="payment-page__grid" id="payment-content" style="display: none;">
+        <div class="payment-page__summary" id="summary-mount"></div>
+        <div class="payment-page__widget" id="widget-mount"></div>
+      </div>
+
+      <div class="checkout__empty" id="payment-empty" style="display: none;">
+        <div class="checkout__empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z"/>
+            <path d="M3 6h18"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+        </div>
+        <h2 class="checkout__empty-title">장바구니가 비어있습니다</h2>
+        <p class="checkout__empty-desc">결제할 제품을 먼저 장바구니에 추가해주세요.</p>
+        <a href="/shop" class="checkout__btn checkout__btn--primary">제품 보러가기</a>
+      </div>
+
+      <div class="payment-widget__loading" id="payment-loading">
+        <div class="payment-widget__spinner"></div>
+        <p class="payment-widget__loading-text">주문 정보를 준비하는 중...</p>
+      </div>
+
+      <div class="payment-page__error" id="payment-error" style="display: none;">
+        <div class="payment-page__error-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h2 class="payment-page__error-title">주문 생성에 실패했습니다</h2>
+        <p class="payment-page__error-desc" id="payment-error-msg">일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>
+        <button class="payment-page__error-retry" id="payment-retry" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 105.64-11.36L1 10"/>
+          </svg>
+          다시 시도
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <ShopFooter />
+</Layout>
+
+<script is:inline define:vars={{ clientKey }}>
+  window.__TOSS_CLIENT_KEY__ = clientKey;
+</script>
+
+<script>
+  import { createElement } from 'react';
+  import { createRoot } from 'react-dom/client';
+  import PaymentWidget from '../../components/payment/PaymentWidget';
+  import OrderSummary from '../../components/payment/OrderSummary';
+
+  async function initPayment() {
+    console.log('[payment.astro] initPayment START');
+    console.log('[payment.astro] __TOSS_CLIENT_KEY__:', window.__TOSS_CLIENT_KEY__ ? 'SET' : 'MISSING');
+    const CART_KEY = 'paymentCart';
+    const loadingEl = document.getElementById('payment-loading');
+    const contentEl = document.getElementById('payment-content');
+    const emptyEl = document.getElementById('payment-empty');
+    const errorEl = document.getElementById('payment-error');
+    const errorMsgEl = document.getElementById('payment-error-msg');
+    const retryBtn = document.getElementById('payment-retry');
+
+    function hideAll() {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
+    }
+
+    function showEmpty() {
+      hideAll();
+      if (emptyEl) emptyEl.style.display = 'block';
+    }
+
+    function showContent() {
+      hideAll();
+      if (contentEl) contentEl.style.display = 'grid';
+    }
+
+    function showError(message?: string) {
+      hideAll();
+      if (errorEl) errorEl.style.display = 'flex';
+      if (errorMsgEl && message) errorMsgEl.textContent = message;
+    }
+
+    function showLoading() {
+      hideAll();
+      if (loadingEl) loadingEl.style.display = 'flex';
+    }
+
+    let cartItems: Array<{ name: string; quantity: number; unit_price: number; options?: Record<string, string> }> = [];
+    let quoteId: string | null = null;
+
+    // 견적 기반 결제인지 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const quoteIdParam = urlParams.get('quote_id');
+
+    try {
+      console.log('[payment.astro] quoteIdParam:', quoteIdParam);
+      if (quoteIdParam) {
+        const pendingRaw = localStorage.getItem('pendingPayment');
+        console.log('[payment.astro] pendingPayment raw:', pendingRaw);
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw);
+          console.log('[payment.astro] pendingPayment parsed:', pending);
+          const totalAmount = Math.round(Number(pending.totalAmount));
+          console.log('[payment.astro] totalAmount (rounded):', totalAmount);
+          if (pending.type === 'quote' && pending.quoteId && totalAmount > 0) {
+            quoteId = pending.quoteId;
+            const products = Array.isArray(pending.products) ? pending.products : [];
+            const itemName = products.length > 0
+              ? (products.length === 1
+                ? (products[0]?.productName || '견적 제품')
+                : `${products[0]?.productName || '견적 제품'} 외 ${products.length - 1}건`)
+              : '견적 결제';
+            cartItems = [{ name: itemName, quantity: 1, unit_price: totalAmount }];
+            console.log('[payment.astro] Quote cart built:', { quoteId, cartItems });
+          }
+        }
+      }
+
+      // 견적 데이터가 없으면 일반 장바구니에서 로드
+      if (cartItems.length === 0) {
+        const raw = localStorage.getItem(CART_KEY);
+        if (!raw) {
+          showEmpty();
+          return;
+        }
+        cartItems = JSON.parse(raw);
+        if (!Array.isArray(cartItems) || cartItems.length === 0) {
+          showEmpty();
+          return;
+        }
+      }
+    } catch {
+      showEmpty();
+      return;
+    }
+
+    let customerName = '고객';
+    let customerEmail: string | undefined;
+    try {
+      // 로그인된 사용자 정보 가져오기
+      const authRes = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      const authData = await authRes.json();
+      if (authData.authenticated && authData.user) {
+        customerName = authData.user.displayName || authData.user.email?.split('@')[0] || '고객';
+        customerEmail = authData.user.email;
+      }
+    } catch {
+      // noop
+    }
+    try {
+      const infoRaw = localStorage.getItem('paymentCustomerInfo');
+      if (infoRaw) {
+        const info = JSON.parse(infoRaw);
+        if (info.name) customerName = info.name;
+        if (info.email) customerEmail = info.email;
+      }
+    } catch {
+      // noop
+    }
+
+    async function createOrderAndRender() {
+      console.log('[payment.astro] createOrderAndRender START');
+      console.log('[payment.astro] cartItems:', cartItems);
+      console.log('[payment.astro] quoteId:', quoteId);
+      console.log('[payment.astro] customerName:', customerName, 'customerEmail:', customerEmail);
+      showLoading();
+
+      try {
+        const orderPayload: Record<string, unknown> = {
+          customer_name: customerName,
+          customer_phone: '000-0000-0000',
+          customer_email: customerEmail,
+          items: cartItems.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })),
+        };
+        if (quoteId) {
+          orderPayload.quote_id = quoteId;
+        }
+
+        console.log('[payment.astro] orderPayload:', orderPayload);
+        const res = await fetch('/api/payment/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload),
+        });
+        console.log('[payment.astro] create-order response:', res.status, res.statusText);
+
+        if (!res.ok) {
+          let errorMessage = `서버 오류가 발생했습니다 (${res.status}).`;
+          try {
+            const errData = await res.json();
+            console.log('[payment.astro] create-order error response:', errData);
+            if (errData.error?.message) {
+              errorMessage = errData.error.message;
+            } else if (typeof errData.error === 'string') {
+              errorMessage = errData.error;
+            } else if (errData.message) {
+              errorMessage = errData.message;
+            }
+          } catch {
+            // use default message
+          }
+          showError(errorMessage);
+          return;
+        }
+
+        const data = await res.json();
+        console.log('[payment.astro] create-order data:', data);
+        if (!data.success || !data.data) {
+          showError(data.error || data.message || '주문 데이터를 생성할 수 없습니다.');
+          return;
+        }
+
+        const { order_id, order_number, amount } = data.data;
+        console.log('[payment.astro] order created:', { order_id, order_number, amount });
+        const orderName = cartItems.length === 1
+          ? cartItems[0].name
+          : `${cartItems[0].name} 외 ${cartItems.length - 1}건`;
+        console.log('[payment.astro] orderName:', orderName);
+
+        showContent();
+
+        const summaryMount = document.getElementById('summary-mount');
+        if (summaryMount) {
+          const summaryRoot = createRoot(summaryMount);
+          summaryRoot.render(
+            createElement(OrderSummary, {
+              items: cartItems.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.unit_price,
+                options: item.options,
+              })),
+              totalAmount: amount,
+            })
+          );
+        }
+
+        const widgetMount = document.getElementById('widget-mount');
+        console.log('[payment.astro] widgetMount exists:', !!widgetMount);
+        if (widgetMount) {
+          const widgetProps = {
+            orderId: order_id,
+            orderName,
+            amount,
+            customerName,
+            customerEmail,
+          };
+          console.log('[payment.astro] Rendering PaymentWidget with props:', widgetProps);
+          const widgetRoot = createRoot(widgetMount);
+          widgetRoot.render(createElement(PaymentWidget, widgetProps));
+          console.log('[payment.astro] PaymentWidget render() called');
+        }
+      } catch {
+        showError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요.');
+      }
+    }
+
+    // Retry button
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        createOrderAndRender();
+      });
+    }
+
+    await createOrderAndRender();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPayment);
+  } else {
+    initPayment();
+  }
+</script>
+
+<style>
+  @import '../../styles/payment.css';
+
+  .payment-page__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-4xl) var(--space-xl);
+    gap: var(--space-md);
+  }
+
+  .payment-page__error-icon {
+    color: #f87171;
+    opacity: 0.8;
+    margin-bottom: var(--space-sm);
+  }
+
+  .payment-page__error-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .payment-page__error-desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 400px;
+  }
+
+  .payment-page__error-retry {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .payment-page__error-retry:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 77, 46, 0.3);
+  }
+</style>

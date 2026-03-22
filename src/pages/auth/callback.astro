@@ -1,0 +1,68 @@
+---
+/**
+ * GET /auth/callback
+ *
+ * Supabase Auth PKCE 콜백 핸들러 (서버 사이드)
+ *
+ * 흐름:
+ * 1. OAuth provider가 ?code=xxx 로 리다이렉트
+ * 2. 서버에서 code + PKCE code_verifier(쿠키)로 세션 교환
+ * 3. 세션 쿠키 설정 후 목적지로 302 리다이렉트
+ *
+ * PKCE code_verifier는 /api/auth/{provider} 호출 시
+ * 서버 클라이언트가 Set-Cookie로 저장하므로,
+ * 반드시 서버에서 exchangeCodeForSession을 호출해야 합니다.
+ */
+export const prerender = false;
+
+import { createAstroServerClient } from '../../lib/supabase-server';
+import { validateRedirect } from '../../lib/auth/validate-redirect';
+
+const code = Astro.url.searchParams.get('code');
+const errorParam = Astro.url.searchParams.get('error');
+const errorDescription = Astro.url.searchParams.get('error_description');
+const safeDest = validateRedirect(Astro.url.searchParams.get('next'));
+const errorRedirect = safeDest.startsWith('/admin') ? '/admin/login' : '/shop/login';
+
+// OAuth provider에서 에러로 돌아온 경우
+if (errorParam) {
+  const errParams = new URLSearchParams({
+    error: errorParam,
+    ...(errorDescription ? { error_desc: errorDescription } : {}),
+    stage: 'oauth_provider',
+  });
+  return Astro.redirect(`${errorRedirect}?${errParams.toString()}`);
+}
+
+// code가 없는 경우
+if (!code) {
+  return Astro.redirect(`${errorRedirect}?error=missing_code&stage=callback_no_code`);
+}
+
+// 서버에서 code exchange (PKCE code_verifier는 쿠키에서 자동 사용)
+const { supabase, response } = createAstroServerClient(Astro.request);
+const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+if (error) {
+  console.error('Auth callback error:', error.message);
+  const errParams = new URLSearchParams({
+    error: 'auth_failed',
+    error_desc: error.message,
+    error_code: String(error.status ?? 400),
+    stage: 'code_exchange',
+  });
+  return Astro.redirect(`${errorRedirect}?${errParams.toString()}`);
+}
+
+// 성공 — 세션 쿠키 포함하여 목적지로 리다이렉트
+const redirectResponse = new Response(null, {
+  status: 302,
+  headers: { Location: safeDest },
+});
+
+response.headers.forEach((value, key) => {
+  redirectResponse.headers.append(key, value);
+});
+
+return redirectResponse;
+---

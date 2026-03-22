@@ -1,0 +1,413 @@
+---
+/**
+ * Dynamic Category Page
+ * Displays products filtered by category with hero banner
+ */
+
+import Layout from '../../../layouts/Layout.astro';
+import ShopNavbar from '../../../components/shop/ShopNavbar.astro';
+import Breadcrumb from '../../../components/shop/Breadcrumb.astro';
+import ProductGrid from '../../../components/shop/ProductGrid.astro';
+
+import ShopFooter from '../../../components/shop/ShopFooter.astro';
+import Toast from '../../../components/shop/Toast.astro';
+import SearchOverlay from '../../../components/shop/SearchOverlay.astro';
+import SortControls from '../../../components/shop/SortControls.astro';
+import QuickViewModal from '../../../components/shop/QuickViewModal.astro';
+import QuoteCartBadge from '../../../components/shop/QuoteCartBadge.astro';
+import { getProducts } from '../../../lib/data-fetchers';
+
+const { category: categoryId } = Astro.params;
+const { categories, products } = await getProducts();
+const category = categories.find((c) => c.id === categoryId);
+
+if (!category) {
+  return Astro.redirect('/shop');
+}
+
+const categoryProducts = products.filter((p) => p.category === categoryId);
+---
+
+<Layout
+  title={`${category.name} - issac.design Shop`}
+  description={`${category.description}. ${category.name} 제품을 둘러보고 견적을 문의하세요.`}
+>
+  <script is:inline>document.body.classList.add('preloader-ready');</script>
+  <ShopNavbar />
+  <Toast />
+  <SearchOverlay />
+
+  <main class="category-page">
+    <!-- Breadcrumb -->
+    <div class="category-page__breadcrumb">
+      <Breadcrumb items={[
+        { label: category.name }
+      ]} />
+    </div>
+
+    <!-- Category Hero Banner -->
+    <section class="category-hero">
+      <div class="category-hero__bg"></div>
+      <div class="category-hero__container">
+        <div class="category-hero__content">
+          <span class="category-hero__label">카테고리</span>
+          <h1 class="category-hero__title">{category.name}</h1>
+          <p class="category-hero__description">{category.description}</p>
+          <div class="category-hero__meta">
+            <span class="category-hero__count">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="1" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              <span>{categoryProducts.length}개 제품</span>
+            </span>
+            <a href="/shop/quote" class="category-hero__cta">
+              <span>무료 견적 문의</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="category-products">
+      <div class="category-products__container">
+        <div class="category-products__header">
+          <h2 class="category-products__title">{category.name} 제품 목록</h2>
+          <p class="category-products__subtitle">
+            총 <strong>{categoryProducts.length}</strong>개의 제품이 있습니다
+          </p>
+        </div>
+        <SortControls />
+        <ProductGrid products={categoryProducts} />
+      </div>
+    </section>
+
+    <!-- Quote CTA -->
+    <section class="category-cta" id="quote">
+      <div class="category-cta__container">
+        <div class="category-cta__content">
+          <h2 class="category-cta__title">맞춤 {category.name} 견적이 필요하신가요?</h2>
+          <p class="category-cta__desc">원하는 제품을 찾지 못하셨나요? 맞춤 제작도 가능합니다. 무료 견적을 받아보세요.</p>
+          <div class="category-cta__actions">
+            <a href="/shop/quote" class="category-cta__button category-cta__button--primary">
+              <span>무료 견적 요청하기</span>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <a href="/shop/contact" class="category-cta__button category-cta__button--secondary">
+              <span>고객센터 문의</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <QuickViewModal />
+  <QuoteCartBadge />
+  <ShopFooter />
+</Layout>
+
+<style>
+  .category-page {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--background);
+  }
+
+  /* Breadcrumb */
+  .category-page__breadcrumb {
+    padding-top: var(--header-height);
+  }
+
+  /* Category Hero */
+  .category-hero {
+    position: relative;
+    width: 100%;
+    padding: var(--space-4xl) 0;
+    overflow: hidden;
+  }
+
+  .category-hero__bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at 30% 50%,
+      rgba(26, 77, 46, 0.15) 0%,
+      rgba(26, 77, 46, 0.05) 40%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .category-hero__container {
+    position: relative;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  .category-hero__content {
+    max-width: 700px;
+  }
+
+  .category-hero__label {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    background: rgba(26, 77, 46, 0.1);
+    color: var(--primary);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wider);
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(26, 77, 46, 0.2);
+    margin-bottom: var(--space-lg);
+  }
+
+  .category-hero__title {
+    font-size: var(--font-size-5xl);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
+  }
+
+  .category-hero__description {
+    font-size: var(--font-size-xl);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    margin-bottom: var(--space-xl);
+  }
+
+  .category-hero__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+  }
+
+  .category-hero__count {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+  }
+
+  .category-hero__count svg {
+    color: var(--primary);
+  }
+
+  .category-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+  }
+
+  .category-hero__cta:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 77, 46, 0.3);
+  }
+
+  /* Products Section */
+  .category-products {
+    position: relative;
+    width: 100%;
+    padding: var(--space-2xl) 0 var(--space-4xl);
+  }
+
+  .category-products__container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  .category-products__header {
+    margin-bottom: var(--space-2xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .category-products__title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+  }
+
+  .category-products__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .category-products__subtitle strong {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* CTA Section */
+  .category-cta {
+    position: relative;
+    width: 100%;
+    padding: var(--space-4xl) 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .category-cta__container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+  }
+
+  .category-cta__content {
+    text-align: center;
+  }
+
+  .category-cta__title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
+  }
+
+  .category-cta__desc {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    margin-bottom: var(--space-xl);
+  }
+
+  .category-cta__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  .category-cta__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-xl);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .category-cta__button--primary {
+    background: var(--primary);
+    color: var(--text-primary);
+  }
+
+  .category-cta__button--primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(26, 77, 46, 0.3);
+  }
+
+  .category-cta__button--secondary {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .category-cta__button--secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .category-cta__button:active {
+    transform: translateY(0);
+  }
+
+  /* Responsive - Tablet */
+  @media (max-width: 1023px) {
+    .category-hero {
+      padding: var(--space-3xl) 0;
+    }
+
+    .category-hero__title {
+      font-size: var(--font-size-4xl);
+    }
+
+    .category-hero__description {
+      font-size: var(--font-size-lg);
+    }
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 719px) {
+    .category-page__breadcrumb {
+      padding-top: var(--header-height-mobile);
+    }
+
+    .category-hero {
+      padding: var(--space-2xl) 0;
+    }
+
+    .category-hero__title {
+      font-size: var(--font-size-3xl);
+    }
+
+    .category-hero__description {
+      font-size: var(--font-size-base);
+    }
+
+    .category-hero__meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-md);
+    }
+
+    .category-hero__cta {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .category-products__title {
+      font-size: var(--font-size-xl);
+    }
+
+    .category-cta {
+      padding: var(--space-3xl) 0;
+    }
+
+    .category-cta__title {
+      font-size: var(--font-size-xl);
+    }
+
+    .category-cta__desc {
+      font-size: var(--font-size-sm);
+    }
+
+    .category-cta__actions {
+      flex-direction: column;
+    }
+
+    .category-cta__button {
+      width: 100%;
+    }
+  }
+</style>
