@@ -9,9 +9,12 @@ const PAGE_SIZE = 20;
 
 const BANNER_CATEGORIES = [
   { id: 'banner-stand', name: '배너거치대' },
+  { id: 'banner-print', name: '배너출력물' },
   { id: 'banner-cloth', name: '현수막' },
+  { id: 'banner-cloth-bulk', name: '대량현수막' },
   { id: 'wind-banner', name: '윈드배너' },
   { id: 'sign-board', name: '입간판' },
+  { id: 'sign-board-print', name: '입간판출력물' },
   { id: 'print-output', name: '실사출력' },
   { id: 'scroll-blind', name: '족자봉·롤블라인드' },
   { id: 'custom-payment', name: '고객맞춤결제' },
@@ -26,6 +29,7 @@ interface BannerProduct {
   thumbnail: string;
   is_visible: boolean;
   created_at: string;
+  options: any;
 }
 
 export default function BannerProductListPage() {
@@ -42,7 +46,7 @@ export default function BannerProductListPage() {
     setLoading(true);
     let query = supabase
       .from('products')
-      .select('id, slug, name, category_id, price, thumbnail, is_visible, created_at', { count: 'exact' })
+      .select('id, slug, name, category_id, price, thumbnail, is_visible, created_at, options', { count: 'exact' })
       .in('category_id', BANNER_CATEGORIES.map(c => c.id));
 
     if (search) query = query.ilike('name', `%${search}%`);
@@ -61,7 +65,23 @@ export default function BannerProductListPage() {
     setLoading(false);
   }, [search, categoryFilter, page]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // 배너 카테고리 DB 동기화 (없으면 생성 — FK 위반 방지) → 완료 후 상품 조회
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        const rows = BANNER_CATEGORIES.map((c, i) => ({
+          id: c.id, name: c.name, order_index: 100 + i, is_visible: true,
+        }));
+        await supabase.from('product_categories').upsert(rows as any[], { onConflict: 'id' });
+      } catch { /* 카테고리 동기화 실패해도 상품 조회는 진행 */ }
+      if (!cancelled) fetchProducts();
+    };
+    init();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { if (search || categoryFilter || page > 1) fetchProducts(); }, [fetchProducts]);
   useEffect(() => { setPage(1); }, [search, categoryFilter]);
 
   const handleDelete = async () => {
@@ -114,6 +134,7 @@ export default function BannerProductListPage() {
                 <th style={{ width: 60 }}>이미지</th>
                 <th>상품명</th>
                 <th style={{ width: 120 }}>카테고리</th>
+                <th style={{ width: 100 }}>소분류</th>
                 <th style={{ width: 100 }}>가격</th>
                 <th style={{ width: 80 }}>노출</th>
                 <th style={{ width: 120 }}>관리</th>
@@ -135,6 +156,7 @@ export default function BannerProductListPage() {
                     </strong>
                   </td>
                   <td><span className="admin-badge">{getCatName(p.category_id)}</span></td>
+                  <td style={{ fontSize: 13, color: '#666' }}>{(p.options as any)?.subcategory || '-'}</td>
                   <td>{p.price || '미정'}</td>
                   <td>
                     <Toggle checked={p.is_visible} onChange={v => handleToggle(p.id, v)} />

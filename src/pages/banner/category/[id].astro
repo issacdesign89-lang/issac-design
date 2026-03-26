@@ -1,13 +1,12 @@
 ---
 /**
  * Category Product List Page
- * /banner/category/[id] — 카테고리별 제품 리스트
+ * /banner/category/[id] — 카테고리별 제품 리스트 (사이드바 레이아웃)
  * BannerHeader 공통 컴포넌트 사용 (메뉴 + 히어로 동일)
  */
 import Layout from '../../../layouts/Layout.astro';
 import BannerHeader from '../../../components/banner/BannerHeader.astro';
 import { supabase } from '../../../lib/supabase';
-import { APP_VERSION } from '../../../version';
 
 const { id } = Astro.params;
 
@@ -31,15 +30,19 @@ const FALLBACK_CONTACT = {
 
 let services = FALLBACK_SERVICES;
 let contactInfo = FALLBACK_CONTACT;
+
 // 배너 전용 카테고리 (하드코딩)
 const categories = [
   { id: 'banner-stand', name: '배너거치대', order_index: 1 },
-  { id: 'banner-cloth', name: '현수막', order_index: 2 },
-  { id: 'wind-banner', name: '윈드배너', order_index: 3 },
-  { id: 'sign-board', name: '입간판', order_index: 4 },
-  { id: 'print-output', name: '실사출력', order_index: 5 },
-  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 6 },
-  { id: 'custom-payment', name: '고객맞춤결제', order_index: 7 },
+  { id: 'banner-print', name: '배너출력물', order_index: 2 },
+  { id: 'banner-cloth', name: '현수막', order_index: 3 },
+  { id: 'banner-cloth-bulk', name: '대량현수막', order_index: 3.5 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 4 },
+  { id: 'sign-board', name: '입간판', order_index: 5 },
+  { id: 'sign-board-print', name: '입간판출력물', order_index: 5.5 },
+  { id: 'print-output', name: '실사출력', order_index: 6 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 7 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 8 },
 ];
 
 try {
@@ -61,58 +64,150 @@ try {
 const current = categories.find(c => c.id === id);
 if (!current) return Astro.redirect('/banner');
 
-// 배너 임시 상품 데이터
-const ALL_BANNER_PRODUCTS: Record<string, any[]> = {
-  'banner-stand': [
-    { name: '실외 배너거치대 (대형)', slug: 'banner-stand-outdoor-l', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bstand/400/400.webp', description: '야외 행사·매장 앞 홍보용 대형 거치대' },
-  ],
-  'banner-cloth': [
-    { name: '일반현수막 (맞춤사이즈)', slug: 'banner-cloth-normal', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth/400/400.webp', description: '맞춤 사이즈 일반현수막 제작' },
-  ],
-  'wind-banner': [
-    { name: '윈드배너 F형 (소형)', slug: 'wind-banner-f-s', price: '38,000원', thumbnail: 'https://picsum.photos/seed/bwind/400/400.webp', description: 'F형 소형 윈드배너 + 철판 베이스' },
-  ],
+// --- Category Section Grouping (for top tabs) ---
+const CATEGORY_SECTIONS: Record<string, string[]> = {
+  banner: ['banner-stand', 'banner-print', 'banner-cloth', 'banner-cloth-bulk', 'wind-banner'],
+  print: ['sign-board', 'sign-board-print', 'print-output', 'scroll-blind'],
+  payment: ['custom-payment'],
+};
+
+const SECTION_TAB_LABELS: Record<string, string> = {
+  'banner-stand': '배너거치대',
+  'banner-print': '배너출력물',
+  'banner-cloth': '현수막',
+  'banner-cloth-bulk': '대량현수막',
+  'wind-banner': '윈드배너',
+  'sign-board': '입간판',
+  'sign-board-print': '입간판출력물',
+  'print-output': '실사출력',
+  'scroll-blind': '족자봉·롤블라인드',
+  'custom-payment': '고객맞춤결제',
+};
+
+// Find which section current category belongs to
+let currentSection = 'banner';
+for (const [section, ids] of Object.entries(CATEGORY_SECTIONS)) {
+  if (ids.includes(id as string)) {
+    currentSection = section;
+    break;
+  }
+}
+const sectionCategoryIds = CATEGORY_SECTIONS[currentSection] || [];
+
+// --- Subcategory Groups (for sidebar) ---
+const SUBCATEGORY_GROUPS: Record<string, { title: string; items: { label: string }[] }[]> = {
   'sign-board': [
-    { name: 'A형 입간판', slug: 'sign-board-a', price: '55,000원', thumbnail: 'https://picsum.photos/seed/bsign/400/400.webp', description: '양면 A형 입간판 (포스터 교체 가능)' },
+    { title: '입간판', items: [{ label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' }] },
+    { title: '입간판출력물', items: [{ label: 'A형입간판 출력물' }, { label: '물통입간판 출력물' }, { label: '사인스탠드 출력물' }] },
   ],
   'print-output': [
-    { name: '실사출력 (접착용)', slug: 'print-output-adhesive', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bprint/400/400.webp', description: '접착용 실사출력 (평당 가격)' },
+    { title: '실사출력', items: [{ label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' }, { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' }] },
   ],
   'scroll-blind': [
-    { name: '족자봉 (기본형)', slug: 'scroll-basic', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bscroll/400/400.webp', description: '기본형 족자봉 세트' },
+    { title: '족자봉·롤블라인드', items: [{ label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' }] },
+  ],
+  'banner-stand': [
+    { title: '배너거치대', items: [{ label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' }, { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' }] },
+  ],
+  'banner-print': [
+    { title: '배너출력물', items: [{ label: '배너출력물' }, { label: '자이언트폴 출력물' }, { label: '미니배너 출력물' }, { label: '특수배너 출력물' }] },
+  ],
+  'sign-board-print': [
+    { title: '입간판출력물', items: [{ label: 'A형입간판 출력물' }, { label: '물통입간판 출력물' }, { label: '사인스탠드 출력물' }] },
+  ],
+  'banner-cloth': [
+    { title: '현수막', items: [{ label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' }, { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' }, { label: '텐트천' }, { label: '부직포' }, { label: '부속품' }] },
+    { title: '대량현수막', items: [{ label: '게릴라현수막' }, { label: '족자현수막' }, { label: '게시대현수막' }, { label: '어깨띠' }] },
+  ],
+  'wind-banner': [
+    { title: '윈드배너거치대', items: [{ label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' }] },
+    { title: '윈드배너출력물', items: [{ label: 'F형 출력물' }, { label: 'S형 출력물' }, { label: 'H형 출력물' }] },
+  ],
+  'banner-cloth-bulk': [
+    { title: '대량현수막', items: [{ label: '게릴라현수막' }, { label: '족자현수막' }, { label: '게시대현수막' }, { label: '어깨띠' }] },
   ],
   'custom-payment': [
-    { name: '고객맞춤결제', slug: 'custom-payment', price: '문의', thumbnail: 'https://picsum.photos/seed/bcustom/400/400.webp', description: '맞춤 주문 결제' },
+    { title: '고객맞춤결제', items: [{ label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' }] },
   ],
 };
-const products = ALL_BANNER_PRODUCTS[id as string] || [];
 
-// Subcategory mapping
+const sidebarGroups = SUBCATEGORY_GROUPS[id as string] || [];
+
+// --- Subcategory mapping for mega menu ---
 const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
   '배너거치대': [
-    { label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' },
-    { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' },
+    { label: '실외거치대', href: '/banner/category/banner-stand?sub=실외거치대' },
+    { label: '실내거치대', href: '/banner/category/banner-stand?sub=실내거치대' },
+    { label: '철제거치대', href: '/banner/category/banner-stand?sub=철제거치대' },
+    { label: '자이언트폴', href: '/banner/category/banner-stand?sub=자이언트폴' },
+    { label: '미니배너', href: '/banner/category/banner-stand?sub=미니배너' },
+    { label: '특수배너', href: '/banner/category/banner-stand?sub=특수배너' },
+    { label: '부속품', href: '/banner/category/banner-stand?sub=부속품' },
+  ],
+  '배너출력물': [
+    { label: '배너출력물', href: '/banner/category/banner-print?sub=배너출력물' },
+    { label: '자이언트폴 출력물', href: '/banner/category/banner-print?sub=자이언트폴 출력물' },
+    { label: '미니배너 출력물', href: '/banner/category/banner-print?sub=미니배너 출력물' },
+    { label: '특수배너 출력물', href: '/banner/category/banner-print?sub=특수배너 출력물' },
   ],
   '현수막': [
-    { label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' },
-    { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' },
-    { label: '텐트천' }, { label: '부직포' }, { label: '부속품' },
+    { label: '일반현수막', href: '/banner/category/banner-cloth?sub=일반현수막' },
+    { label: '장폭현수막', href: '/banner/category/banner-cloth?sub=장폭현수막' },
+    { label: '솔벤현수막', href: '/banner/category/banner-cloth?sub=솔벤현수막' },
+    { label: '라텍스현수막', href: '/banner/category/banner-cloth?sub=라텍스현수막' },
+    { label: '테이블현수막', href: '/banner/category/banner-cloth?sub=테이블현수막' },
+    { label: '열전사메쉬', href: '/banner/category/banner-cloth?sub=열전사메쉬' },
+    { label: '텐트천', href: '/banner/category/banner-cloth?sub=텐트천' },
+    { label: '부직포', href: '/banner/category/banner-cloth?sub=부직포' },
+    { label: '부속품', href: '/banner/category/banner-cloth?sub=부속품' },
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
+  ],
+  '대량현수막': [
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth-bulk?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth-bulk?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth-bulk?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth-bulk?sub=어깨띠' },
   ],
   '윈드배너': [
-    { label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' },
+    { label: '윈드배너F형', href: '/banner/category/wind-banner?sub=윈드배너F형' },
+    { label: '윈드배너S형', href: '/banner/category/wind-banner?sub=윈드배너S형' },
+    { label: '윈드배너H형', href: '/banner/category/wind-banner?sub=윈드배너H형' },
+    { label: '부속품', href: '/banner/category/wind-banner?sub=부속품' },
+    { label: 'F형 출력물', href: '/banner/category/wind-banner?sub=F형 출력물' },
+    { label: 'S형 출력물', href: '/banner/category/wind-banner?sub=S형 출력물' },
+    { label: 'H형 출력물', href: '/banner/category/wind-banner?sub=H형 출력물' },
   ],
   '입간판': [
-    { label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' },
+    { label: 'A형입간판', href: '/banner/category/sign-board?sub=A형입간판' },
+    { label: '물통입간판', href: '/banner/category/sign-board?sub=물통입간판' },
+    { label: '사인스탠드', href: '/banner/category/sign-board?sub=사인스탠드' },
+    { label: '부속품', href: '/banner/category/sign-board?sub=부속품' },
+  ],
+  '입간판출력물': [
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
   ],
   '실사출력': [
-    { label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' },
-    { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' },
+    { label: '접착용', href: '/banner/category/print-output?sub=접착용' },
+    { label: '비접착용', href: '/banner/category/print-output?sub=비접착용' },
+    { label: '시트커팅', href: '/banner/category/print-output?sub=시트커팅' },
+    { label: '차량용자석', href: '/banner/category/print-output?sub=차량용자석' },
+    { label: 'POP·보드', href: '/banner/category/print-output?sub=POP·보드' },
+    { label: '등신대', href: '/banner/category/print-output?sub=등신대' },
   ],
   '족자봉·롤블라인드': [
-    { label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' },
+    { label: '족자봉', href: '/banner/category/scroll-blind?sub=족자봉' },
+    { label: '롤블라인드', href: '/banner/category/scroll-blind?sub=롤블라인드' },
+    { label: '부속품', href: '/banner/category/scroll-blind?sub=부속품' },
   ],
   '고객맞춤결제': [
-    { label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' },
+    { label: '고객맞춤결제', href: '/banner/category/custom-payment?sub=고객맞춤결제' },
+    { label: '디자인비결제', href: '/banner/category/custom-payment?sub=디자인비결제' },
+    { label: '배송비결제', href: '/banner/category/custom-payment?sub=배송비결제' },
   ],
 };
 
@@ -122,18 +217,131 @@ const megaMenuData = categories.map(cat => ({
   subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
 }));
 
-const currentYear = new Date().getFullYear();
+// --- Hardcoded fallback products ---
+const ALL_BANNER_PRODUCTS: Record<string, any[]> = {
+  'banner-stand': [
+    { name: '실외 배너거치대 (대형)', slug: 'banner-stand-outdoor-l', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bstand/400/400.webp', description: '야외 행사·매장 앞 홍보용 대형 거치대', subcategory: '실외거치대' },
+    { name: '실외 배너거치대 (중형)', slug: 'banner-stand-outdoor-m', price: '38,000원', thumbnail: 'https://picsum.photos/seed/bstand2/400/400.webp', description: '야외 행사용 중형 배너 거치대', subcategory: '실외거치대' },
+    { name: '실내 배너거치대 (접이식)', slug: 'banner-stand-indoor', price: '35,000원', thumbnail: 'https://picsum.photos/seed/bindoor/400/400.webp', description: '실내 전시·안내용 접이식 배너 거치대', subcategory: '실내거치대' },
+    { name: '실내 배너거치대 (고정형)', slug: 'banner-stand-indoor-fixed', price: '42,000원', thumbnail: 'https://picsum.photos/seed/bindoor2/400/400.webp', description: '실내 고정 설치형 배너 거치대', subcategory: '실내거치대' },
+    { name: '철제거치대 (일반형)', slug: 'banner-stand-steel', price: '55,000원', thumbnail: 'https://picsum.photos/seed/bsteel/400/400.webp', description: '내구성 높은 철제 배너 거치대', subcategory: '철제거치대' },
+    { name: '철제거치대 (대형)', slug: 'banner-stand-steel-l', price: '75,000원', thumbnail: 'https://picsum.photos/seed/bsteel2/400/400.webp', description: '대형 철제 프레임 배너 거치대', subcategory: '철제거치대' },
+    { name: '자이언트폴 (3m)', slug: 'banner-stand-giant-3m', price: '85,000원', thumbnail: 'https://picsum.photos/seed/bgiant/400/400.webp', description: '3m 높이 자이언트폴 거치대', subcategory: '자이언트폴' },
+    { name: '자이언트폴 (5m)', slug: 'banner-stand-giant-5m', price: '120,000원', thumbnail: 'https://picsum.photos/seed/bgiant2/400/400.webp', description: '5m 높이 대형 자이언트폴', subcategory: '자이언트폴' },
+    { name: '미니배너 (탁상형)', slug: 'banner-stand-mini-desk', price: '18,000원', thumbnail: 'https://picsum.photos/seed/bmini/400/400.webp', description: '탁상 위 미니 배너 거치대', subcategory: '미니배너' },
+    { name: '미니배너 (스탠드형)', slug: 'banner-stand-mini-stand', price: '25,000원', thumbnail: 'https://picsum.photos/seed/bmini2/400/400.webp', description: '소형 스탠드 미니배너', subcategory: '미니배너' },
+    { name: '특수배너 (회전형)', slug: 'banner-stand-special-rotate', price: '95,000원', thumbnail: 'https://picsum.photos/seed/bspecial/400/400.webp', description: '회전형 특수 배너 거치대', subcategory: '특수배너' },
+    { name: '특수배너 (양면 전동)', slug: 'banner-stand-special-electric', price: '150,000원', thumbnail: 'https://picsum.photos/seed/bspecial2/400/400.webp', description: '전동 양면 특수 배너', subcategory: '특수배너' },
+    { name: '배너 물통베이스', slug: 'banner-stand-acc-water', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bacc1/400/400.webp', description: '배너 거치대용 물통 베이스', subcategory: '부속품' },
+    { name: '배너 모래주머니', slug: 'banner-stand-acc-sand', price: '5,000원', thumbnail: 'https://picsum.photos/seed/bacc2/400/400.webp', description: '거치대 고정용 모래주머니', subcategory: '부속품' },
+    { name: '배너 연결클립', slug: 'banner-stand-acc-clip', price: '3,000원', thumbnail: 'https://picsum.photos/seed/bacc3/400/400.webp', description: '배너 출력물 연결 클립 세트', subcategory: '부속품' },
+  ],
+  'banner-print': [
+    { name: '배너출력물 (단면)', slug: 'banner-print-standard', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bprt1/400/400.webp', description: '실외 배너 거치대용 단면 출력물', subcategory: '배너출력물' },
+    { name: '배너출력물 (양면)', slug: 'banner-print-double', price: '20,000원', thumbnail: 'https://picsum.photos/seed/bprt2/400/400.webp', description: '실외 배너 거치대용 양면 출력물', subcategory: '배너출력물' },
+    { name: '자이언트폴 출력물 (3m)', slug: 'banner-print-giant-3m', price: '25,000원', thumbnail: 'https://picsum.photos/seed/bprtg1/400/400.webp', description: '3m 자이언트폴용 출력물', subcategory: '자이언트폴 출력물' },
+    { name: '자이언트폴 출력물 (5m)', slug: 'banner-print-giant-5m', price: '40,000원', thumbnail: 'https://picsum.photos/seed/bprtg2/400/400.webp', description: '5m 자이언트폴용 출력물', subcategory: '자이언트폴 출력물' },
+    { name: '미니배너 출력물 (탁상형)', slug: 'banner-print-mini-desk', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bprtm1/400/400.webp', description: '탁상형 미니배너용 출력물', subcategory: '미니배너 출력물' },
+    { name: '미니배너 출력물 (스탠드형)', slug: 'banner-print-mini-stand', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bprtm2/400/400.webp', description: '스탠드형 미니배너용 출력물', subcategory: '미니배너 출력물' },
+    { name: '특수배너 출력물 (회전형)', slug: 'banner-print-special-rotate', price: '30,000원', thumbnail: 'https://picsum.photos/seed/bprts1/400/400.webp', description: '회전형 특수배너용 출력물', subcategory: '특수배너 출력물' },
+    { name: '특수배너 출력물 (전동형)', slug: 'banner-print-special-electric', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bprts2/400/400.webp', description: '전동형 특수배너용 출력물', subcategory: '특수배너 출력물' },
+  ],
+  'banner-cloth': [
+    { name: '일반현수막 (맞춤사이즈)', slug: 'banner-cloth-normal', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth/400/400.webp', description: '맞춤 사이즈 일반현수막 제작', subcategory: '일반현수막' },
+    { name: '장폭현수막 (대형)', slug: 'banner-cloth-wide', price: '25,000원', thumbnail: 'https://picsum.photos/seed/bcloth-wide/400/400.webp', description: '건물 외벽, 공사현장 대형 현수막', subcategory: '장폭현수막' },
+    { name: '솔벤현수막 (고내구성)', slug: 'banner-cloth-solvent', price: '18,000원', thumbnail: 'https://picsum.photos/seed/bcloth-solv/400/400.webp', description: '자외선·비에 강한 고내구성 현수막', subcategory: '솔벤현수막' },
+    { name: '라텍스현수막 (친환경)', slug: 'banner-cloth-latex', price: '22,000원', thumbnail: 'https://picsum.photos/seed/bcloth-latex/400/400.webp', description: '무취 친환경 라텍스 인쇄 현수막', subcategory: '라텍스현수막' },
+    { name: '테이블현수막', slug: 'banner-cloth-table', price: '35,000원', thumbnail: 'https://picsum.photos/seed/bcloth-table/400/400.webp', description: '전시회·박람회용 테이블 커버 현수막', subcategory: '테이블현수막' },
+    { name: '열전사메쉬 현수막', slug: 'banner-cloth-mesh', price: '20,000원', thumbnail: 'https://picsum.photos/seed/bcloth-mesh/400/400.webp', description: '바람 통하는 메쉬 소재 현수막', subcategory: '열전사메쉬' },
+    { name: '텐트천 현수막', slug: 'banner-cloth-tent', price: '28,000원', thumbnail: 'https://picsum.photos/seed/bcloth-tent/400/400.webp', description: '텐트 천막용 방수 현수막', subcategory: '텐트천' },
+    { name: '부직포 현수막', slug: 'banner-cloth-nonwoven', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bcloth-nonw/400/400.webp', description: '가볍고 경제적인 실내용 현수막', subcategory: '부직포' },
+    { name: '현수막 부속품', slug: 'banner-cloth-accessories', price: '1,000원', thumbnail: 'https://picsum.photos/seed/bcloth-acc/400/400.webp', description: '로프, 아일렛, 케이블타이 등 부속품', subcategory: '부속품' },
+    { name: '게릴라현수막', slug: 'banner-cloth-guerrilla', price: '3,000원', thumbnail: 'https://picsum.photos/seed/bcloth-guerr/400/400.webp', description: '대량 제작 소형 현수막', subcategory: '게릴라현수막' },
+    { name: '족자현수막', slug: 'banner-cloth-scroll', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bcloth-scroll/400/400.webp', description: '족자봉 포함 걸이형 현수막', subcategory: '족자현수막' },
+    { name: '게시대현수막', slug: 'banner-cloth-bulletin', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth-bull/400/400.webp', description: '아파트·마을 게시판 전용 현수막', subcategory: '게시대현수막' },
+    { name: '어깨띠 (홍보용)', slug: 'banner-cloth-sash', price: '5,000원', thumbnail: 'https://picsum.photos/seed/bcloth-sash/400/400.webp', description: '선거·캠페인·행사용 어깨띠', subcategory: '어깨띠' },
+  ],
+  'banner-cloth-bulk': [
+    { name: '게릴라현수막 (대량)', slug: 'banner-cloth-guerrilla', price: '3,000원', thumbnail: 'https://picsum.photos/seed/bcloth-guerr/400/400.webp', description: '대량 제작 소형 현수막. 50장 이상 대량 할인', subcategory: '게릴라현수막' },
+    { name: '족자현수막', slug: 'banner-cloth-scroll', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bcloth-scroll/400/400.webp', description: '족자봉 포함 걸이형 현수막', subcategory: '족자현수막' },
+    { name: '게시대현수막', slug: 'banner-cloth-bulletin', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth-bull/400/400.webp', description: '아파트·마을 게시판 전용 현수막', subcategory: '게시대현수막' },
+    { name: '어깨띠 (홍보용)', slug: 'banner-cloth-sash', price: '5,000원', thumbnail: 'https://picsum.photos/seed/bcloth-sash/400/400.webp', description: '선거·캠페인·행사용 어깨띠', subcategory: '어깨띠' },
+  ],
+  'wind-banner': [
+    { name: '윈드배너 F형 (소형)', slug: 'wind-banner-f-s', price: '38,000원', thumbnail: 'https://picsum.photos/seed/bwind/400/400.webp', description: 'F형 소형 윈드배너 + 철판 베이스', subcategory: '윈드배너F형' },
+    { name: '윈드배너 S형', slug: 'wind-banner-s', price: '42,000원', thumbnail: 'https://picsum.photos/seed/bwind-s/400/400.webp', description: 'S형 윈드배너 거치대 + 철판 베이스 세트', subcategory: '윈드배너S형' },
+    { name: '윈드배너 H형', slug: 'wind-banner-h', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bwind-h/400/400.webp', description: 'H형 윈드배너 거치대 + 철판 베이스 세트', subcategory: '윈드배너H형' },
+    { name: '윈드배너 부속품', slug: 'wind-banner-accessories', price: '5,000원', thumbnail: 'https://picsum.photos/seed/bwind-acc/400/400.webp', description: '윈드배너 전용 부속품·교체용 부품', subcategory: '부속품' },
+    { name: 'F형 출력물', slug: 'wind-banner-f-print', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bwind-fp/400/400.webp', description: 'F형 윈드배너 전용 고해상도 출력물', subcategory: 'F형 출력물' },
+    { name: 'S형 출력물', slug: 'wind-banner-s-print', price: '18,000원', thumbnail: 'https://picsum.photos/seed/bwind-sp/400/400.webp', description: 'S형 윈드배너 전용 고해상도 출력물', subcategory: 'S형 출력물' },
+    { name: 'H형 출력물', slug: 'wind-banner-h-print', price: '20,000원', thumbnail: 'https://picsum.photos/seed/bwind-hp/400/400.webp', description: 'H형 윈드배너 전용 고해상도 출력물', subcategory: 'H형 출력물' },
+  ],
+  'sign-board': [
+    { name: 'A형 입간판', slug: 'sign-board-a', price: '55,000원', thumbnail: 'https://picsum.photos/seed/bsign/400/400.webp', description: '양면 A형 입간판 (포스터 교체 가능)', subcategory: 'A형입간판' },
+    { name: '물통입간판', slug: 'sign-board-water', price: '65,000원', thumbnail: 'https://picsum.photos/seed/bsign-water/400/400.webp', description: '물통 베이스 입간판 (양면 포스터)', subcategory: '물통입간판' },
+    { name: '사인스탠드', slug: 'sign-board-stand', price: '48,000원', thumbnail: 'https://picsum.photos/seed/bsign-stand/400/400.webp', description: '실내외 겸용 사인스탠드', subcategory: '사인스탠드' },
+  ],
+  'sign-board-print': [
+    { name: 'A형입간판 출력물', slug: 'sign-board-a-print', price: '12,000원', thumbnail: 'https://picsum.photos/seed/sbprint-a/400/400.webp', description: 'A형입간판 전용 포스터 출력물', subcategory: 'A형입간판 출력물' },
+    { name: '물통입간판 출력물', slug: 'sign-board-water-print', price: '15,000원', thumbnail: 'https://picsum.photos/seed/sbprint-w/400/400.webp', description: '물통입간판 전용 포스터 출력물', subcategory: '물통입간판 출력물' },
+    { name: '사인스탠드 출력물', slug: 'sign-board-stand-print', price: '10,000원', thumbnail: 'https://picsum.photos/seed/sbprint-s/400/400.webp', description: '사인스탠드 전용 포스터 출력물', subcategory: '사인스탠드 출력물' },
+  ],
+  'print-output': [
+    { name: '실사출력 (접착용)', slug: 'print-output-adhesive', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bprint/400/400.webp', description: '접착용 실사출력 (평당 가격)', subcategory: '접착용' },
+  ],
+  'scroll-blind': [
+    { name: '족자봉 기본형', slug: 'scroll-basic', price: '7,000원', thumbnail: 'https://picsum.photos/seed/sb-basic/400/400.webp', description: '알루미늄 족자봉 기본 세트 (600~1200mm)', subcategory: '족자봉' },
+    { name: '족자봉 우드형', slug: 'scroll-wood', price: '12,000원', thumbnail: 'https://picsum.photos/seed/sb-wood/400/400.webp', description: '원목 마감 족자봉 세트, 고급스러운 인테리어', subcategory: '족자봉' },
+    { name: '족자봉 자석형', slug: 'scroll-magnetic', price: '15,000원', thumbnail: 'https://picsum.photos/seed/sb-mag/400/400.webp', description: '자석 탈부착 족자봉, 출력물 교체 간편', subcategory: '족자봉' },
+    { name: '족자봉 광폭형', slug: 'scroll-wide', price: '20,000원', thumbnail: 'https://picsum.photos/seed/sb-wide/400/400.webp', description: '1500mm 이상 대형 족자봉, 와이드 포스터용', subcategory: '족자봉' },
+    { name: '롤블라인드 일반형', slug: 'rollblind-standard', price: '35,000원', thumbnail: 'https://picsum.photos/seed/rb-std/400/400.webp', description: '실사출력 롤블라인드, 창문·파티션용', subcategory: '롤블라인드' },
+    { name: '롤블라인드 암막형', slug: 'rollblind-blackout', price: '45,000원', thumbnail: 'https://picsum.photos/seed/rb-blk/400/400.webp', description: '빛 차단 암막 롤블라인드, 사무실·매장용', subcategory: '롤블라인드' },
+    { name: '롤블라인드 방염형', slug: 'rollblind-fireproof', price: '55,000원', thumbnail: 'https://picsum.photos/seed/rb-fire/400/400.webp', description: '방염 인증 롤블라인드, 관공서·상업시설용', subcategory: '롤블라인드' },
+    { name: '족자봉 부속 세트', slug: 'scroll-accessory', price: '3,000원', thumbnail: 'https://picsum.photos/seed/sb-acc/400/400.webp', description: '족자봉 교체용 줄·고리·마감캡 세트', subcategory: '부속품' },
+    { name: '롤블라인드 체인 세트', slug: 'rollblind-chain', price: '5,000원', thumbnail: 'https://picsum.photos/seed/rb-chain/400/400.webp', description: '롤블라인드 교체용 체인·클러치 세트', subcategory: '부속품' },
+    { name: '롤블라인드 브라켓', slug: 'rollblind-bracket', price: '7,000원', thumbnail: 'https://picsum.photos/seed/rb-bracket/400/400.webp', description: '롤블라인드 설치용 브라켓 세트', subcategory: '부속품' },
+  ],
+  'custom-payment': [
+    { name: '고객맞춤결제', slug: 'custom-payment', price: '문의', thumbnail: 'https://picsum.photos/seed/bcustom/400/400.webp', description: '맞춤 주문 결제', subcategory: '고객맞춤결제' },
+  ],
+};
 
-export async function getStaticPaths() {
-  const ids = ['banner-stand', 'banner-cloth', 'wind-banner', 'sign-board', 'print-output', 'scroll-blind', 'custom-payment'];
-  return ids.map(id => ({ params: { id } }));
+// --- Supabase product fetching ---
+let dbProducts: any[] = [];
+try {
+  const CATEGORY_GROUP: Record<string, string[]> = {
+    'banner-cloth': ['banner-cloth', 'banner-cloth-bulk'],
+    'sign-board': ['sign-board', 'sign-board-print'],
+  };
+  const categoryIds = CATEGORY_GROUP[id as string] || [id as string];
+  const { data } = await supabase
+    .from('products')
+    .select('*')
+    .in('category_id', categoryIds)
+    .eq('is_visible', true)
+    .order('created_at', { ascending: false });
+  if (data) dbProducts = data;
+} catch (e) {
+  console.error('[banner/category] Supabase fetch failed:', e);
 }
+
+// Use Supabase data if available, otherwise fall back to hardcoded
+const products = dbProducts.length > 0 ? dbProducts.map((p: any) => ({
+  name: p.name,
+  slug: p.slug,
+  price: p.price || '문의',
+  thumbnail: p.thumbnail || 'https://picsum.photos/seed/default/400/400.webp',
+  description: p.description || '',
+  subcategory: (p.options as any)?.subcategory || '',
+})) : (ALL_BANNER_PRODUCTS[id as string] || []);
+
+const currentYear = new Date().getFullYear();
 ---
 
 <Layout title={`${current.name} - issac.design`} description={`${current.name} 제품 목록 - issac.design 배너 전문`}>
 
 <style is:global>
-  /* ===== Category page content ===== */
+  /* ===== Breadcrumb ===== */
   .cp-breadcrumb {
     padding: 16px 0;
     border-bottom: 1px solid #e0e0e0;
@@ -145,27 +353,112 @@ export async function getStaticPaths() {
   .cp-breadcrumb a:hover { color: #1A4D2E; text-decoration: underline; }
   .cp-breadcrumb span { color: #222; font-weight: 600; }
 
-  .cp-header {
-    padding: 32px 0 24px;
-    border-bottom: 2px solid #222;
+  /* ===== Category Tabs ===== */
+  .cp-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    border-bottom: 2px solid #e0e0e0;
+    margin-top: 8px;
   }
-  .cp-header h1 {
-    font-size: 1.6rem;
+  .cp-tab {
+    display: inline-block;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #888;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .cp-tab:hover {
+    color: #222;
+  }
+  .cp-tab.active {
+    color: #1A4D2E;
+    border-bottom-color: #1A4D2E;
+  }
+
+  /* ===== Sidebar + Content Layout ===== */
+  .cp-layout {
+    display: flex;
+    gap: 0;
+    padding-top: 0;
+    min-height: 600px;
+  }
+
+  /* --- Sidebar --- */
+  .cp-sidebar {
+    width: 200px;
+    min-width: 200px;
+    padding: 24px 20px 24px 0;
+    border-right: 1px solid #e8e8e8;
+  }
+  .cp-sb-group {
+    margin-bottom: 24px;
+  }
+  .cp-sb-group:last-child {
+    margin-bottom: 0;
+  }
+  .cp-sb-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .cp-sb-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sb-item {
+    font-size: 14px;
+    color: #555;
+    padding: 6px 0 6px 12px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    border-radius: 4px;
+  }
+  .sb-item:hover {
+    color: #1A4D2E;
+    background: #f5f9f7;
+  }
+  .sb-item.active {
+    color: #1A4D2E;
+    font-weight: 700;
+    background: #edf5f0;
+  }
+
+  /* --- Main Content --- */
+  .cp-main {
+    flex: 1;
+    min-width: 0;
+    padding: 24px 0 64px 32px;
+  }
+
+  .cp-main-header {
+    margin-bottom: 24px;
+  }
+  .cp-main-header h1 {
+    font-size: 1.4rem;
     font-weight: 800;
     color: #222;
     letter-spacing: -0.02em;
   }
-  .cp-header p {
+  .cp-main-header p {
     font-size: 14px;
     color: #999;
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
+  /* ===== Product Grid ===== */
   .cp-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
-    padding: 32px 0 64px;
   }
   .cp-card {
     display: block;
@@ -188,6 +481,7 @@ export async function getStaticPaths() {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    gap: 8px;
   }
   .cp-card-price {
     font-size: 16px;
@@ -219,6 +513,7 @@ export async function getStaticPaths() {
     border-radius: 6px;
   }
 
+  /* ===== Footer ===== */
   .cp-footer {
     background: #1a1a1a;
     color: #777;
@@ -228,14 +523,49 @@ export async function getStaticPaths() {
   }
   .cp-footer a { color: #aaa; }
 
+  /* ===== Responsive ===== */
   @media (max-width: 960px) {
-    .cp-grid { grid-template-columns: repeat(3, 1fr); }
+    .cp-grid { grid-template-columns: repeat(2, 1fr); }
+    .cp-sidebar { width: 180px; min-width: 180px; }
+    .cp-tab { padding: 12px 20px; font-size: 15px; }
   }
   @media (max-width: 768px) {
+    .cp-layout {
+      flex-direction: column;
+    }
+    .cp-sidebar {
+      width: 100%;
+      min-width: 100%;
+      border-right: none;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 16px 0;
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+    }
+    .cp-sb-group {
+      margin-bottom: 0;
+      min-width: max-content;
+    }
+    .cp-sb-title {
+      border-bottom: none;
+      padding-bottom: 4px;
+      font-size: 14px;
+    }
+    .sb-item {
+      padding: 4px 10px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .cp-main {
+      padding: 20px 0 48px 0;
+    }
     .cp-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .cp-tab { padding: 10px 16px; font-size: 14px; }
   }
   @media (max-width: 480px) {
     .cp-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .cp-tab { padding: 10px 12px; font-size: 13px; }
   }
 </style>
 
@@ -250,36 +580,66 @@ export async function getStaticPaths() {
     </div>
   </div>
 
-  <!-- Page Header -->
+  <!-- Category Tabs -->
   <div class="wrap">
-    <div class="cp-header">
-      <h1>{current.name}</h1>
-      <p>{products.length}개의 제품</p>
-    </div>
+    <nav class="cp-tabs">
+      {sectionCategoryIds.map((catId) => (
+        <a
+          href={`/banner/category/${catId}`}
+          class={`cp-tab${catId === id ? ' active' : ''}`}
+        >
+          {SECTION_TAB_LABELS[catId] || catId}
+        </a>
+      ))}
+    </nav>
   </div>
 
-  <!-- Product Grid -->
+  <!-- Sidebar + Product Grid Layout -->
   <div class="wrap">
-    {products.length > 0 ? (
-      <div class="cp-grid">
-        {products.map((p) => (
-          <a href={`/banner/product/${p.slug}`} class="cp-card">
-            <img src={p.thumbnail} alt={p.name} class="cp-card-img" loading="lazy" />
-            <div class="cp-card-name">
-              <span>{p.name}</span>
-              <span class="cp-card-price">{p.price === '문의' ? '가격문의' : p.price}</span>
-            </div>
-            {p.description && <div class="cp-card-desc">{p.description.slice(0, 50)}</div>}
-          </a>
+    <div class="cp-layout">
+      <!-- Left Sidebar -->
+      <aside class="cp-sidebar">
+        {sidebarGroups.map((group) => (
+          <div class="cp-sb-group">
+            <div class="cp-sb-title">{group.title}</div>
+            <ul class="cp-sb-list">
+              {group.items.map((item) => (
+                <li class="sb-item" data-subcategory={item.label}>{item.label}</li>
+              ))}
+            </ul>
+          </div>
         ))}
+      </aside>
+
+      <!-- Main Content -->
+      <div class="cp-main">
+        <div class="cp-main-header">
+          <h1>{current.name}</h1>
+          <p>{products.length}개의 제품</p>
+        </div>
+
+        {products.length > 0 ? (
+          <div class="cp-grid">
+            {products.map((p) => (
+              <a href={`/banner/product/${p.slug}`} class="cp-card" data-subcategory={p.subcategory || ''}>
+                <img src={p.thumbnail} alt={p.name} class="cp-card-img" loading="lazy" />
+                <div class="cp-card-name">
+                  <span>{p.name}</span>
+                  <span class="cp-card-price">{p.price === '문의' ? '가격문의' : p.price}</span>
+                </div>
+                {p.description && <div class="cp-card-desc">{p.description.slice(0, 50)}</div>}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="cp-empty">
+            <h2>등록된 제품이 없습니다</h2>
+            <p>곧 새로운 제품이 추가될 예정입니다.</p>
+            <a href="/banner#contact">문의하기</a>
+          </div>
+        )}
       </div>
-    ) : (
-      <div class="cp-empty">
-        <h2>등록된 제품이 없습니다</h2>
-        <p>곧 새로운 제품이 추가될 예정입니다.</p>
-        <a href="/banner#contact">문의하기</a>
-      </div>
-    )}
+    </div>
   </div>
 
   <!-- Footer -->
@@ -289,5 +649,48 @@ export async function getStaticPaths() {
     </div>
   </footer>
 </div>
+
+<!-- Client-side subcategory filtering -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const sidebarItems = document.querySelectorAll<HTMLElement>('.sb-item');
+    const productCards = document.querySelectorAll<HTMLElement>('.cp-card');
+    const countEl = document.querySelector('.cp-main-header p');
+
+    function filterBySubcategory(sub: string | null) {
+      sidebarItems.forEach(i => i.classList.remove('active'));
+
+      if (!sub) {
+        productCards.forEach(card => { (card as HTMLElement).style.display = ''; });
+        if (countEl) countEl.textContent = `${productCards.length}개의 제품`;
+        return;
+      }
+
+      sidebarItems.forEach(i => {
+        if (i.dataset.subcategory === sub) i.classList.add('active');
+      });
+
+      let visibleCount = 0;
+      productCards.forEach(card => {
+        const match = card.dataset.subcategory === sub;
+        (card as HTMLElement).style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+      if (countEl) countEl.textContent = `${visibleCount}개의 제품`;
+    }
+
+    // ?sub= 쿼리 파라미터로 페이지 로드 시 필터 적용
+    const urlSub = new URL(window.location.href).searchParams.get('sub');
+    if (urlSub) filterBySubcategory(urlSub);
+
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const sub = item.dataset.subcategory;
+        const isActive = item.classList.contains('active');
+        filterBySubcategory(isActive ? null : (sub || null));
+      });
+    });
+  });
+</script>
 
 </Layout>

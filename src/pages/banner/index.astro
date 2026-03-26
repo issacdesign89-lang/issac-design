@@ -33,24 +33,53 @@ let portfolio: any[] = [];
 // 배너 전용 카테고리 (하드코딩)
 const categories = [
   { id: 'banner-stand', name: '배너거치대', order_index: 1 },
-  { id: 'banner-cloth', name: '현수막', order_index: 2 },
-  { id: 'wind-banner', name: '윈드배너', order_index: 3 },
-  { id: 'sign-board', name: '입간판', order_index: 4 },
-  { id: 'print-output', name: '실사출력', order_index: 5 },
-  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 6 },
-  { id: 'custom-payment', name: '고객맞춤결제', order_index: 7 },
+  { id: 'banner-print', name: '배너출력물', order_index: 2 },
+  { id: 'banner-cloth', name: '현수막', order_index: 3 },
+  { id: 'banner-cloth-bulk', name: '대량현수막', order_index: 3.5 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 4 },
+  { id: 'sign-board', name: '입간판', order_index: 5 },
+  { id: 'sign-board-print', name: '입간판출력물', order_index: 5.5 },
+  { id: 'print-output', name: '실사출력', order_index: 6 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 7 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 8 },
 ];
 
-// 배너 임시 상품 데이터 (카테고리별 1개)
-products = [
+// Supabase에서 배너 상품 동적 조회
+const FALLBACK_PRODUCTS = [
   { name: '실외 배너거치대 (대형)', slug: 'banner-stand-outdoor-l', price: '45,000원', thumbnail: 'https://picsum.photos/seed/bstand/400/400.webp', category_id: 'banner-stand' },
+  { name: '배너출력물 (단면)', slug: 'banner-print-standard', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bprint-out/400/400.webp', category_id: 'banner-print' },
   { name: '일반현수막 (맞춤사이즈)', slug: 'banner-cloth-normal', price: '15,000원', thumbnail: 'https://picsum.photos/seed/bcloth/400/400.webp', category_id: 'banner-cloth' },
   { name: '윈드배너 F형 (소형)', slug: 'wind-banner-f-s', price: '38,000원', thumbnail: 'https://picsum.photos/seed/bwind/400/400.webp', category_id: 'wind-banner' },
   { name: 'A형 입간판', slug: 'sign-board-a', price: '55,000원', thumbnail: 'https://picsum.photos/seed/bsign/400/400.webp', category_id: 'sign-board' },
   { name: '실사출력 (접착용)', slug: 'print-output-adhesive', price: '8,000원', thumbnail: 'https://picsum.photos/seed/bprint/400/400.webp', category_id: 'print-output' },
   { name: '족자봉 (기본형)', slug: 'scroll-basic', price: '12,000원', thumbnail: 'https://picsum.photos/seed/bscroll/400/400.webp', category_id: 'scroll-blind' },
   { name: '고객맞춤결제', slug: 'custom-payment', price: '문의', thumbnail: 'https://picsum.photos/seed/bcustom/400/400.webp', category_id: 'custom-payment' },
+  { name: 'A형입간판 출력물', slug: 'sign-board-a-print', price: '12,000원', thumbnail: 'https://picsum.photos/seed/sbprint-a/400/400.webp', description: 'A형입간판 전용 포스터 출력물', category_id: 'sign-board-print' },
 ];
+
+try {
+  const bannerCategoryIds = categories.map(c => c.id);
+  const { data } = await supabase
+    .from('products')
+    .select('name, slug, price, thumbnail, category_id')
+    .in('category_id', bannerCategoryIds)
+    .eq('is_visible', true)
+    .order('created_at', { ascending: false });
+  if (data?.length) {
+    products = data.map((p: any) => ({
+      name: p.name,
+      slug: p.slug,
+      price: p.price || '문의',
+      thumbnail: p.thumbnail || '',
+      category_id: p.category_id,
+    }));
+  }
+} catch {}
+
+// DB 결과 없으면 하드코딩 fallback
+if (!products.length) {
+  products = FALLBACK_PRODUCTS;
+}
 
 try {
   const { data } = await supabase.from('portfolio_items').select('*').eq('is_visible', true).order('order_index').limit(6);
@@ -77,29 +106,81 @@ const currentYear = new Date().getFullYear();
 // Subcategory mapping
 const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
   '배너거치대': [
-    { label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' },
-    { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' },
+    { label: '실외거치대', href: '/banner/category/banner-stand?sub=실외거치대' },
+    { label: '실내거치대', href: '/banner/category/banner-stand?sub=실내거치대' },
+    { label: '철제거치대', href: '/banner/category/banner-stand?sub=철제거치대' },
+    { label: '자이언트폴', href: '/banner/category/banner-stand?sub=자이언트폴' },
+    { label: '미니배너', href: '/banner/category/banner-stand?sub=미니배너' },
+    { label: '특수배너', href: '/banner/category/banner-stand?sub=특수배너' },
+    { label: '부속품', href: '/banner/category/banner-stand?sub=부속품' },
+  ],
+  '배너출력물': [
+    { label: '배너출력물', href: '/banner/category/banner-print?sub=배너출력물' },
+    { label: '자이언트폴 출력물', href: '/banner/category/banner-print?sub=자이언트폴 출력물' },
+    { label: '미니배너 출력물', href: '/banner/category/banner-print?sub=미니배너 출력물' },
+    { label: '특수배너 출력물', href: '/banner/category/banner-print?sub=특수배너 출력물' },
   ],
   '현수막': [
-    { label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' },
-    { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' },
-    { label: '텐트천' }, { label: '부직포' }, { label: '부속품' },
+    { label: '일반현수막', href: '/banner/category/banner-cloth?sub=일반현수막' },
+    { label: '장폭현수막', href: '/banner/category/banner-cloth?sub=장폭현수막' },
+    { label: '솔벤현수막', href: '/banner/category/banner-cloth?sub=솔벤현수막' },
+    { label: '라텍스현수막', href: '/banner/category/banner-cloth?sub=라텍스현수막' },
+    { label: '테이블현수막', href: '/banner/category/banner-cloth?sub=테이블현수막' },
+    { label: '열전사메쉬', href: '/banner/category/banner-cloth?sub=열전사메쉬' },
+    { label: '텐트천', href: '/banner/category/banner-cloth?sub=텐트천' },
+    { label: '부직포', href: '/banner/category/banner-cloth?sub=부직포' },
+    { label: '부속품', href: '/banner/category/banner-cloth?sub=부속품' },
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
+  ],
+  '대량현수막': [
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
   ],
   '윈드배너': [
-    { label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' },
+    { label: '윈드배너F형', href: '/banner/category/wind-banner?sub=윈드배너F형' },
+    { label: '윈드배너S형', href: '/banner/category/wind-banner?sub=윈드배너S형' },
+    { label: '윈드배너H형', href: '/banner/category/wind-banner?sub=윈드배너H형' },
+    { label: '부속품', href: '/banner/category/wind-banner?sub=부속품' },
+    { label: 'F형 출력물', href: '/banner/category/wind-banner?sub=F형 출력물' },
+    { label: 'S형 출력물', href: '/banner/category/wind-banner?sub=S형 출력물' },
+    { label: 'H형 출력물', href: '/banner/category/wind-banner?sub=H형 출력물' },
   ],
   '입간판': [
-    { label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' },
+    { label: 'A형입간판', href: '/banner/category/sign-board?sub=A형입간판' },
+    { label: '물통입간판', href: '/banner/category/sign-board?sub=물통입간판' },
+    { label: '사인스탠드', href: '/banner/category/sign-board?sub=사인스탠드' },
+    { label: '부속품', href: '/banner/category/sign-board?sub=부속품' },
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
+  ],
+  '입간판출력물': [
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
   ],
   '실사출력': [
-    { label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' },
-    { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' },
+    { label: '접착용', href: '/banner/category/print-output?sub=접착용' },
+    { label: '비접착용', href: '/banner/category/print-output?sub=비접착용' },
+    { label: '시트커팅', href: '/banner/category/print-output?sub=시트커팅' },
+    { label: '차량용자석', href: '/banner/category/print-output?sub=차량용자석' },
+    { label: 'POP·보드', href: '/banner/category/print-output?sub=POP·보드' },
+    { label: '등신대', href: '/banner/category/print-output?sub=등신대' },
   ],
   '족자봉·롤블라인드': [
-    { label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' },
+    { label: '족자봉', href: '/banner/category/scroll-blind?sub=족자봉' },
+    { label: '롤블라인드', href: '/banner/category/scroll-blind?sub=롤블라인드' },
+    { label: '부속품', href: '/banner/category/scroll-blind?sub=부속품' },
   ],
   '고객맞춤결제': [
-    { label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' },
+    { label: '고객맞춤결제', href: '/banner/category/custom-payment?sub=고객맞춤결제' },
+    { label: '디자인비결제', href: '/banner/category/custom-payment?sub=디자인비결제' },
+    { label: '배송비결제', href: '/banner/category/custom-payment?sub=배송비결제' },
   ],
 };
 

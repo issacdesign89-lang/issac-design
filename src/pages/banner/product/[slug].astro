@@ -5,6 +5,7 @@
  */
 import Layout from '../../../layouts/Layout.astro';
 import BannerHeader from '../../../components/banner/BannerHeader.astro';
+import { supabase } from '../../../lib/supabase';
 
 const { slug } = Astro.params;
 
@@ -24,28 +25,143 @@ const FALLBACK_CONTACT = {
 };
 const categories = [
   { id: 'banner-stand', name: '배너거치대', order_index: 1 },
-  { id: 'banner-cloth', name: '현수막', order_index: 2 },
-  { id: 'wind-banner', name: '윈드배너', order_index: 3 },
-  { id: 'sign-board', name: '입간판', order_index: 4 },
-  { id: 'print-output', name: '실사출력', order_index: 5 },
-  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 6 },
-  { id: 'custom-payment', name: '고객맞춤결제', order_index: 7 },
+  { id: 'banner-print', name: '배너출력물', order_index: 2 },
+  { id: 'banner-cloth', name: '현수막', order_index: 3 },
+  { id: 'banner-cloth-bulk', name: '대량현수막', order_index: 3.5 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 4 },
+  { id: 'sign-board', name: '입간판', order_index: 5 },
+  { id: 'sign-board-print', name: '입간판출력물', order_index: 5.5 },
+  { id: 'print-output', name: '실사출력', order_index: 6 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 7 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 8 },
 ];
-const SUBCATEGORY_MAP: Record<string, { label: string }[]> = {
-  '배너거치대': [{ label: '실외거치대' }, { label: '실내거치대' }, { label: '철제거치대' }, { label: '자이언트폴' }, { label: '미니배너' }, { label: '특수배너' }, { label: '부속품' }],
-  '현수막': [{ label: '일반현수막' }, { label: '장폭현수막' }, { label: '솔벤현수막' }, { label: '라텍스현수막' }, { label: '테이블현수막' }, { label: '열전사메쉬' }, { label: '텐트천' }, { label: '부직포' }, { label: '부속품' }],
-  '윈드배너': [{ label: '윈드배너F형' }, { label: '윈드배너S형' }, { label: '윈드배너H형' }, { label: '부속품' }],
-  '입간판': [{ label: 'A형입간판' }, { label: '물통입간판' }, { label: '사인스탠드' }, { label: '부속품' }],
-  '실사출력': [{ label: '접착용' }, { label: '비접착용' }, { label: '시트커팅' }, { label: '차량용자석' }, { label: 'POP·보드' }, { label: '등신대' }],
-  '족자봉·롤블라인드': [{ label: '족자봉' }, { label: '롤블라인드' }, { label: '부속품' }],
-  '고객맞춤결제': [{ label: '고객맞춤결제' }, { label: '디자인비결제' }, { label: '배송비결제' }],
+const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
+  '배너거치대': [
+    { label: '실외거치대', href: '/banner/category/banner-stand?sub=실외거치대' },
+    { label: '실내거치대', href: '/banner/category/banner-stand?sub=실내거치대' },
+    { label: '철제거치대', href: '/banner/category/banner-stand?sub=철제거치대' },
+    { label: '자이언트폴', href: '/banner/category/banner-stand?sub=자이언트폴' },
+    { label: '미니배너', href: '/banner/category/banner-stand?sub=미니배너' },
+    { label: '특수배너', href: '/banner/category/banner-stand?sub=특수배너' },
+    { label: '부속품', href: '/banner/category/banner-stand?sub=부속품' },
+  ],
+  '배너출력물': [
+    { label: '배너출력물', href: '/banner/category/banner-print?sub=배너출력물' },
+    { label: '자이언트폴 출력물', href: '/banner/category/banner-print?sub=자이언트폴 출력물' },
+    { label: '미니배너 출력물', href: '/banner/category/banner-print?sub=미니배너 출력물' },
+    { label: '특수배너 출력물', href: '/banner/category/banner-print?sub=특수배너 출력물' },
+  ],
+  '현수막': [
+    { label: '일반현수막', href: '/banner/category/banner-cloth?sub=일반현수막' },
+    { label: '장폭현수막', href: '/banner/category/banner-cloth?sub=장폭현수막' },
+    { label: '솔벤현수막', href: '/banner/category/banner-cloth?sub=솔벤현수막' },
+    { label: '라텍스현수막', href: '/banner/category/banner-cloth?sub=라텍스현수막' },
+    { label: '테이블현수막', href: '/banner/category/banner-cloth?sub=테이블현수막' },
+    { label: '열전사메쉬', href: '/banner/category/banner-cloth?sub=열전사메쉬' },
+    { label: '텐트천', href: '/banner/category/banner-cloth?sub=텐트천' },
+    { label: '부직포', href: '/banner/category/banner-cloth?sub=부직포' },
+    { label: '부속품', href: '/banner/category/banner-cloth?sub=부속품' },
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
+  ],
+  '대량현수막': [
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth-bulk?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth-bulk?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth-bulk?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth-bulk?sub=어깨띠' },
+  ],
+  '윈드배너': [
+    { label: '윈드배너F형', href: '/banner/category/wind-banner?sub=윈드배너F형' },
+    { label: '윈드배너S형', href: '/banner/category/wind-banner?sub=윈드배너S형' },
+    { label: '윈드배너H형', href: '/banner/category/wind-banner?sub=윈드배너H형' },
+    { label: '부속품', href: '/banner/category/wind-banner?sub=부속품' },
+    { label: 'F형 출력물', href: '/banner/category/wind-banner?sub=F형 출력물' },
+    { label: 'S형 출력물', href: '/banner/category/wind-banner?sub=S형 출력물' },
+    { label: 'H형 출력물', href: '/banner/category/wind-banner?sub=H형 출력물' },
+  ],
+  '입간판': [
+    { label: 'A형입간판', href: '/banner/category/sign-board?sub=A형입간판' },
+    { label: '물통입간판', href: '/banner/category/sign-board?sub=물통입간판' },
+    { label: '사인스탠드', href: '/banner/category/sign-board?sub=사인스탠드' },
+    { label: '부속품', href: '/banner/category/sign-board?sub=부속품' },
+  ],
+  '입간판출력물': [
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
+  ],
+  '실사출력': [
+    { label: '접착용', href: '/banner/category/print-output?sub=접착용' },
+    { label: '비접착용', href: '/banner/category/print-output?sub=비접착용' },
+    { label: '시트커팅', href: '/banner/category/print-output?sub=시트커팅' },
+    { label: '차량용자석', href: '/banner/category/print-output?sub=차량용자석' },
+    { label: 'POP·보드', href: '/banner/category/print-output?sub=POP·보드' },
+    { label: '등신대', href: '/banner/category/print-output?sub=등신대' },
+  ],
+  '족자봉·롤블라인드': [
+    { label: '족자봉', href: '/banner/category/scroll-blind?sub=족자봉' },
+    { label: '롤블라인드', href: '/banner/category/scroll-blind?sub=롤블라인드' },
+    { label: '부속품', href: '/banner/category/scroll-blind?sub=부속품' },
+  ],
+  '고객맞춤결제': [
+    { label: '고객맞춤결제', href: '/banner/category/custom-payment?sub=고객맞춤결제' },
+    { label: '디자인비결제', href: '/banner/category/custom-payment?sub=디자인비결제' },
+    { label: '배송비결제', href: '/banner/category/custom-payment?sub=배송비결제' },
+  ],
 };
 const megaMenuData = categories.map(cat => ({
   id: cat.id, name: cat.name,
   subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
 }));
 
-// 상품 데이터
+// --- Category name helper ---
+function getCategoryName(id: string): string {
+  const map: Record<string, string> = {
+    'banner-stand': '배너거치대', 'banner-print': '배너출력물', 'banner-cloth': '현수막',
+    'banner-cloth-bulk': '대량현수막', 'wind-banner': '윈드배너', 'sign-board': '입간판',
+    'sign-board-print': '입간판출력물', 'print-output': '실사출력',
+    'scroll-blind': '족자봉·롤블라인드', 'custom-payment': '고객맞춤결제',
+  };
+  return map[id] || id;
+}
+
+// --- Supabase fetch (primary) ---
+let product: any = null;
+
+try {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('slug', slug as string)
+    .eq('is_visible', true)
+    .single();
+
+  if (!error && data) {
+    const opts = (data.options as any) || {};
+    product = {
+      name: data.name,
+      category: { id: data.category_id || '', name: getCategoryName(data.category_id || '') },
+      subcategory: opts.subcategory || '',
+      basePrice: Number(opts.base_price) || 0,
+      thumbnail: data.thumbnail || 'https://placehold.co/800x800/f5f5f5/999?text=No+Image',
+      images: Array.isArray(data.images) ? data.images : [],
+      description: data.description || '',
+      specs: typeof data.specs === 'object' && data.specs !== null && !Array.isArray(data.specs)
+        ? Object.entries(data.specs).map(([k, v]) => ({ label: k, value: v as string }))
+        : [],
+      options: Array.isArray(opts.option_groups) ? opts.option_groups : [],
+      deliveryOptions: Array.isArray(opts.delivery_options) ? opts.delivery_options : [],
+      deadlines: { courier: opts.deadline_courier || '', pickup: opts.deadline_pickup || '' },
+    };
+  }
+} catch (e) {
+  console.error('[banner/product] Supabase fetch failed:', e);
+}
+
+// --- Hardcoded fallback data ---
+if (!product) {
 const PRODUCTS: Record<string, any> = {
   'banner-stand-outdoor-l': {
     name: '실외 배너거치대 (대형)',
@@ -124,6 +240,409 @@ const PRODUCTS: Record<string, any> = {
     ],
     deadlines: { courier: '오전 11시', pickup: '오후 4시' },
   },
+  'banner-cloth-wide': {
+    name: '장폭현수막 (대형)',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '장폭현수막',
+    basePrice: 25000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-wide/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-wide/800/800.webp'],
+    description: '대형 장폭현수막. 건물 외벽, 공사현장, 대형 행사에 적합한 초대형 현수막입니다. 최대 폭 5m까지 이음 없이 제작 가능.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (최대 폭 5m)' },
+      { label: '재질', value: '터폴린 (방수)' },
+      { label: '인쇄', value: '솔벤 대형 프린터 출력' },
+      { label: '마감', value: '열재단 + 아일렛' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '200×500cm', price: 25000 },
+        { label: '200×800cm', price: 40000 },
+        { label: '300×1000cm', price: 65000 },
+        { label: '맞춤사이즈 (㎡당)', price: 5000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 5000 },
+        { label: '벨크로 마감', price: 8000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '현수막 로프 (10m)', price: 3000 },
+        { label: '케이블타이 (10개)', price: 1000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 5,000원~ (대형 추가비용 발생)' },
+      { label: '착불택배', info: '수량·사이즈별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-solvent': {
+    name: '솔벤현수막 (고내구성)',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '솔벤현수막',
+    basePrice: 18000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-solv/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-solv/800/800.webp'],
+    description: '솔벤 잉크 인쇄 현수막. 자외선·비·바람에 강한 고내구성 현수막으로 장기 야외 설치에 최적화.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (가로×세로)' },
+      { label: '재질', value: '터폴린 (13oz 고강도)' },
+      { label: '인쇄', value: '솔벤 잉크 (내후성 우수)' },
+      { label: '마감', value: '열재단 + 아일렛' },
+      { label: '내구연한', value: '야외 6개월~1년' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×300cm', price: 18000 },
+        { label: '90×600cm', price: 30000 },
+        { label: '120×300cm', price: 24000 },
+        { label: '120×600cm', price: 38000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-latex': {
+    name: '라텍스현수막 (친환경)',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '라텍스현수막',
+    basePrice: 22000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-latex/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-latex/800/800.webp'],
+    description: '라텍스 잉크 기반 친환경 현수막. 실내 사용 시 냄새가 없고 색감이 뛰어납니다. 전시회, 실내 행사에 추천.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (가로×세로)' },
+      { label: '재질', value: '라텍스 전용 원단' },
+      { label: '인쇄', value: '라텍스 잉크 (무취·친환경)' },
+      { label: '마감', value: '열재단 + 아일렛' },
+      { label: '특징', value: '무취, 고해상도, 친환경' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×300cm', price: 22000 },
+        { label: '90×600cm', price: 36000 },
+        { label: '120×300cm', price: 28000 },
+        { label: '120×600cm', price: 45000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 3000 },
+        { label: '벨크로 마감', price: 5000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-table': {
+    name: '테이블현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '테이블현수막',
+    basePrice: 35000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-table/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-table/800/800.webp'],
+    description: '테이블 위에 씌워 사용하는 현수막. 전시회, 박람회, 접수대 등에서 브랜드 홍보에 효과적.',
+    specs: [
+      { label: '사이즈', value: '180×60×72cm (6인용 기준)' },
+      { label: '재질', value: '고급 폴리에스터' },
+      { label: '인쇄', value: '승화전사 인쇄' },
+      { label: '마감', value: '봉제 마감' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '4인용 (120×60cm)', price: 35000 },
+        { label: '6인용 (180×60cm)', price: 45000 },
+        { label: '8인용 (240×60cm)', price: 55000 },
+      ]},
+      { group: '형태', items: [
+        { label: '전면형 (앞면만)', price: 0 },
+        { label: '3면형 (앞+양옆)', price: 15000 },
+        { label: '전체형 (4면)', price: 25000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 5,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-mesh': {
+    name: '열전사메쉬 현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '열전사메쉬',
+    basePrice: 20000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-mesh/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-mesh/800/800.webp'],
+    description: '바람이 통하는 메쉬 소재 현수막. 건물 외벽, 펜스 등 바람이 강한 곳에 설치해도 찢어지지 않습니다.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (가로×세로)' },
+      { label: '재질', value: '메쉬 원단 (통풍)' },
+      { label: '인쇄', value: '열전사 인쇄' },
+      { label: '마감', value: '열재단 + 아일렛' },
+      { label: '특징', value: '통풍성, 바람 저항 최소화' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×300cm', price: 20000 },
+        { label: '90×600cm', price: 33000 },
+        { label: '120×300cm', price: 26000 },
+        { label: '120×600cm', price: 42000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 4000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-tent': {
+    name: '텐트천 현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '텐트천',
+    basePrice: 28000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-tent/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-tent/800/800.webp'],
+    description: '텐트 천막용 현수막. 텐트 지붕이나 옆면에 부착하여 브랜드 홍보에 활용. 방수 처리.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작' },
+      { label: '재질', value: '텐트천 (옥스포드 원단)' },
+      { label: '인쇄', value: '승화전사 인쇄' },
+      { label: '마감', value: '봉제 + 벨크로' },
+      { label: '특징', value: '방수, 자외선 차단' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '200×200cm', price: 28000 },
+        { label: '200×300cm', price: 38000 },
+        { label: '300×300cm', price: 50000 },
+      ]},
+      { group: '마감', items: [
+        { label: '벨크로 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 5000 },
+        { label: '지퍼 마감', price: 8000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 5,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-nonwoven': {
+    name: '부직포 현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '부직포',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-nonw/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-nonw/800/800.webp'],
+    description: '부직포 소재 현수막. 가볍고 경제적인 실내용 현수막. 행사, 이벤트, 축하 현수막에 적합.',
+    specs: [
+      { label: '사이즈', value: '맞춤 제작 (가로×세로)' },
+      { label: '재질', value: '부직포 원단' },
+      { label: '인쇄', value: '디지털 인쇄' },
+      { label: '마감', value: '재단 + 아일렛' },
+      { label: '특징', value: '가볍고 경제적, 실내용 권장' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×300cm', price: 12000 },
+        { label: '90×600cm', price: 20000 },
+        { label: '120×300cm', price: 16000 },
+        { label: '120×600cm', price: 26000 },
+      ]},
+      { group: '마감', items: [
+        { label: '아일렛 (기본)', price: 0 },
+        { label: '봉주머니 마감', price: 2000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 3,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-accessories': {
+    name: '현수막 부속품',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '부속품',
+    basePrice: 1000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-acc/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-acc/800/800.webp'],
+    description: '현수막 설치에 필요한 각종 부속품. 로프, 아일렛, 케이블타이, 고리 등.',
+    specs: [
+      { label: '종류', value: '로프, 아일렛, 케이블타이, 고리 등' },
+      { label: '용도', value: '현수막 설치 보조용' },
+    ],
+    options: [
+      { group: '부속품', items: [
+        { label: '현수막 로프 (5m)', price: 1000 },
+        { label: '현수막 로프 (10m)', price: 2000 },
+        { label: '케이블타이 (10개)', price: 1000 },
+        { label: '케이블타이 (50개)', price: 3000 },
+        { label: '스프링 고리 (4개)', price: 2000 },
+        { label: '아일렛 추가 (4개)', price: 1500 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 3,000원~' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-guerrilla': {
+    name: '게릴라현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '게릴라현수막',
+    basePrice: 3000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-guerr/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-guerr/800/800.webp'],
+    description: '대량 제작 전문 게릴라현수막. 전봇대, 난간 등에 부착하는 소형 현수막. 소량~대량 모두 가능.',
+    specs: [
+      { label: '사이즈', value: '50×70cm (기본)' },
+      { label: '재질', value: '터폴린 (경량)' },
+      { label: '인쇄', value: '디지털 솔벤 인쇄' },
+      { label: '마감', value: '열재단' },
+      { label: '최소수량', value: '10장~' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '50×70cm', price: 3000 },
+        { label: '60×90cm', price: 4000 },
+        { label: '70×100cm', price: 5000 },
+      ]},
+      { group: '수량 할인', items: [
+        { label: '10~49장 (기본가)', price: 0 },
+        { label: '50~99장 (10% 할인)', price: -300 },
+        { label: '100장 이상 (20% 할인)', price: -600 },
+      ]},
+      { group: '마감', items: [
+        { label: '열재단 (기본)', price: 0 },
+        { label: '아일렛 추가', price: 500 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 5,000원~ (수량별)' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-scroll': {
+    name: '족자현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '족자현수막',
+    basePrice: 8000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-scroll/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-scroll/800/800.webp'],
+    description: '족자봉이 포함된 현수막. 걸이형 현수막으로 실내 벽면에 간편하게 설치. 매장, 학원, 사무실 등에 적합.',
+    specs: [
+      { label: '사이즈', value: '60×180cm (기본)' },
+      { label: '재질', value: '실사 출력물 + 족자봉' },
+      { label: '인쇄', value: '고해상도 디지털 인쇄' },
+      { label: '마감', value: '상하 족자봉 + 걸이 끈' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '60×160cm', price: 8000 },
+        { label: '60×180cm', price: 10000 },
+        { label: '80×200cm', price: 15000 },
+        { label: '100×200cm', price: 20000 },
+      ]},
+      { group: '봉 종류', items: [
+        { label: '플라스틱봉 (기본)', price: 0 },
+        { label: '알루미늄봉', price: 3000 },
+        { label: '원목봉', price: 5000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 3,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-bulletin': {
+    name: '게시대현수막',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '게시대현수막',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-bull/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-bull/800/800.webp'],
+    description: '아파트, 마을 게시판 전용 현수막. 게시대 규격에 맞춘 사이즈로 제작. 대량 주문 할인.',
+    specs: [
+      { label: '사이즈', value: '90×60cm (게시판 규격)' },
+      { label: '재질', value: '터폴린 (방수)' },
+      { label: '인쇄', value: '디지털 솔벤 인쇄' },
+      { label: '마감', value: '열재단 + 아일렛(4개)' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '90×60cm (표준)', price: 15000 },
+        { label: '120×80cm (대형)', price: 22000 },
+        { label: '60×40cm (소형)', price: 10000 },
+      ]},
+      { group: '수량 할인', items: [
+        { label: '1~9장 (기본가)', price: 0 },
+        { label: '10~29장 (10% 할인)', price: -1500 },
+        { label: '30장 이상 (20% 할인)', price: -3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-cloth-sash': {
+    name: '어깨띠 (홍보용)',
+    category: { id: 'banner-cloth', name: '현수막' },
+    subcategory: '어깨띠',
+    basePrice: 5000,
+    thumbnail: 'https://picsum.photos/seed/bcloth-sash/800/800.webp',
+    images: ['https://picsum.photos/seed/bcloth-sash/800/800.webp'],
+    description: '선거, 캠페인, 행사용 어깨띠. 원단에 문구를 인쇄하여 제작. 대량 주문 시 할인.',
+    specs: [
+      { label: '사이즈', value: '150×20cm (기본)' },
+      { label: '재질', value: '폴리에스터 원단' },
+      { label: '인쇄', value: '승화전사 인쇄' },
+      { label: '마감', value: '봉제 마감 + 핀' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '150×20cm (기본)', price: 5000 },
+        { label: '160×25cm (대형)', price: 7000 },
+      ]},
+      { group: '수량 할인', items: [
+        { label: '1~9장 (기본가)', price: 0 },
+        { label: '10~49장 (15% 할인)', price: -750 },
+        { label: '50장 이상 (25% 할인)', price: -1250 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '안전핀 (2개)', price: 500 },
+        { label: '벨크로 마감', price: 1000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 3,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
   'wind-banner-f-s': {
     name: '윈드배너 F형 (소형)',
     category: { id: 'wind-banner', name: '윈드배너' },
@@ -167,6 +686,241 @@ const PRODUCTS: Record<string, any> = {
     ],
     deadlines: { courier: '출력물 오전 11시', pickup: '거치대 오후 4시' },
   },
+  'wind-banner-s': {
+    name: '윈드배너 S형',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: '윈드배너S형',
+    basePrice: 42000,
+    thumbnail: 'https://picsum.photos/seed/bwind-s/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-s-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-s-d2/1140/800.webp',
+      'https://picsum.photos/seed/bwind-s-d3/1140/600.webp',
+    ],
+    description: 'S형 윈드배너 거치대 + 철판 베이스 세트. S자 곡선 형태로 우아한 디자인, 양면 시인성이 뛰어납니다.',
+    specs: [
+      { label: '총 높이', value: '2,300mm (소형)' },
+      { label: '출력면 사이즈', value: '1,800×500mm' },
+      { label: '베이스', value: '철판 베이스 (4.5kg)' },
+      { label: '구성품', value: '폴대 + 철판 베이스' },
+    ],
+    options: [
+      { group: '거치대', items: [
+        { label: '윈드S형 (소형)+철판', price: 42000 },
+        { label: '윈드S형 (중형)+철판', price: 52000 },
+        { label: '윈드S형 (대형)+철판', price: 65000 },
+      ]},
+      { group: '출력물', items: [
+        { label: '선택안함', price: 0 },
+        { label: '단면 출력 1장', price: 18000 },
+        { label: '양면 출력 1장', price: 28000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '물통 베이스 (교체)', price: 15000 },
+        { label: '십자 베이스 (교체)', price: 18000 },
+        { label: '캐리백', price: 8000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 8,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '출력물 오전 11시', pickup: '거치대 오후 4시' },
+  },
+  'wind-banner-h': {
+    name: '윈드배너 H형',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: '윈드배너H형',
+    basePrice: 45000,
+    thumbnail: 'https://picsum.photos/seed/bwind-h/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-h-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-h-d2/1140/800.webp',
+      'https://picsum.photos/seed/bwind-h-d3/1140/600.webp',
+    ],
+    description: 'H형 윈드배너 거치대 + 철판 베이스 세트. 직사각형 형태로 넓은 출력면적, 메시지 전달력이 우수합니다.',
+    specs: [
+      { label: '총 높이', value: '2,500mm (소형)' },
+      { label: '출력면 사이즈', value: '2,000×600mm' },
+      { label: '베이스', value: '철판 베이스 (5kg)' },
+      { label: '구성품', value: '폴대 + 철판 베이스' },
+    ],
+    options: [
+      { group: '거치대', items: [
+        { label: '윈드H형 (소형)+철판', price: 45000 },
+        { label: '윈드H형 (중형)+철판', price: 55000 },
+        { label: '윈드H형 (대형)+철판', price: 68000 },
+      ]},
+      { group: '출력물', items: [
+        { label: '선택안함', price: 0 },
+        { label: '단면 출력 1장', price: 20000 },
+        { label: '양면 출력 1장', price: 32000 },
+      ]},
+      { group: '별매품', items: [
+        { label: '선택안함', price: 0 },
+        { label: '물통 베이스 (교체)', price: 15000 },
+        { label: '십자 베이스 (교체)', price: 18000 },
+        { label: '캐리백', price: 10000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 8,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '출력물 오전 11시', pickup: '거치대 오후 4시' },
+  },
+  'wind-banner-accessories': {
+    name: '윈드배너 부속품',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: '부속품',
+    basePrice: 5000,
+    thumbnail: 'https://picsum.photos/seed/bwind-acc/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-acc-d1/1140/600.webp',
+    ],
+    description: '윈드배너 전용 부속품·교체용 부품 모음. 베이스, 캐리백, 연결부품 등 개별 구매 가능합니다.',
+    specs: [
+      { label: '종류', value: '베이스·캐리백·연결부품' },
+      { label: '호환', value: 'F형·S형·H형 공용' },
+      { label: '재질', value: '스틸·나일론' },
+    ],
+    options: [
+      { group: '부속품', items: [
+        { label: '철판 베이스', price: 15000 },
+        { label: '물통 베이스', price: 18000 },
+        { label: '십자 베이스', price: 20000 },
+        { label: '캐리백 (소형)', price: 8000 },
+        { label: '캐리백 (대형)', price: 12000 },
+        { label: '연결봉 (상단)', price: 5000 },
+        { label: '연결봉 (하단)', price: 5000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오후 2시', pickup: '오후 4시' },
+  },
+  'wind-banner-f-print': {
+    name: 'F형 출력물',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: 'F형 출력물',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/bwind-fp/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-fp-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-fp-d2/1140/800.webp',
+    ],
+    description: 'F형 윈드배너 전용 출력물. 고해상도 디지털 인쇄, 내후성 잉크 사용으로 야외에서도 선명합니다.',
+    specs: [
+      { label: '소형 사이즈', value: '1,600×750mm' },
+      { label: '중형 사이즈', value: '2,100×900mm' },
+      { label: '대형 사이즈', value: '2,600×1,050mm' },
+      { label: '인쇄 방식', value: '고해상도 디지털 인쇄' },
+      { label: '재질', value: '폴리에스터 원단' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: 'F형 소형 출력물', price: 15000 },
+        { label: 'F형 중형 출력물', price: 20000 },
+        { label: 'F형 대형 출력물', price: 25000 },
+      ]},
+      { group: '인쇄', items: [
+        { label: '단면 인쇄 (기본)', price: 0 },
+        { label: '양면 인쇄 (+10000)', price: 10000 },
+      ]},
+      { group: '마감', items: [
+        { label: '기본 마감', price: 0 },
+        { label: '방수 코팅', price: 3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'wind-banner-s-print': {
+    name: 'S형 출력물',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: 'S형 출력물',
+    basePrice: 18000,
+    thumbnail: 'https://picsum.photos/seed/bwind-sp/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-sp-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-sp-d2/1140/800.webp',
+    ],
+    description: 'S형 윈드배너 전용 출력물. S자 곡선 형태에 맞춘 정밀 재단, 양면 인쇄 가능.',
+    specs: [
+      { label: '소형 사이즈', value: '1,800×500mm' },
+      { label: '중형 사이즈', value: '2,300×600mm' },
+      { label: '대형 사이즈', value: '2,800×700mm' },
+      { label: '인쇄 방식', value: '고해상도 디지털 인쇄' },
+      { label: '재질', value: '폴리에스터 원단' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: 'S형 소형 출력물', price: 18000 },
+        { label: 'S형 중형 출력물', price: 23000 },
+        { label: 'S형 대형 출력물', price: 28000 },
+      ]},
+      { group: '인쇄', items: [
+        { label: '단면 인쇄 (기본)', price: 0 },
+        { label: '양면 인쇄 (+12000)', price: 12000 },
+      ]},
+      { group: '마감', items: [
+        { label: '기본 마감', price: 0 },
+        { label: '방수 코팅', price: 3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'wind-banner-h-print': {
+    name: 'H형 출력물',
+    category: { id: 'wind-banner', name: '윈드배너' },
+    subcategory: 'H형 출력물',
+    basePrice: 20000,
+    thumbnail: 'https://picsum.photos/seed/bwind-hp/800/800.webp',
+    images: [
+      'https://picsum.photos/seed/bwind-hp-d1/1140/600.webp',
+      'https://picsum.photos/seed/bwind-hp-d2/1140/800.webp',
+    ],
+    description: 'H형 윈드배너 전용 출력물. 넓은 직사각형 출력면에 최적화된 사이즈로 제작됩니다.',
+    specs: [
+      { label: '소형 사이즈', value: '2,000×600mm' },
+      { label: '중형 사이즈', value: '2,500×700mm' },
+      { label: '대형 사이즈', value: '3,000×800mm' },
+      { label: '인쇄 방식', value: '고해상도 디지털 인쇄' },
+      { label: '재질', value: '폴리에스터 원단' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: 'H형 소형 출력물', price: 20000 },
+        { label: 'H형 중형 출력물', price: 26000 },
+        { label: 'H형 대형 출력물', price: 32000 },
+      ]},
+      { group: '인쇄', items: [
+        { label: '단면 인쇄 (기본)', price: 0 },
+        { label: '양면 인쇄 (+14000)', price: 14000 },
+      ]},
+      { group: '마감', items: [
+        { label: '기본 마감', price: 0 },
+        { label: '방수 코팅', price: 3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '로젠택배 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
   'sign-board-a': {
     name: 'A형 입간판',
     category: { id: 'sign-board', name: '입간판' },
@@ -182,6 +936,87 @@ const PRODUCTS: Record<string, any> = {
       { group: '별매품', items: [{ label: '선택안함', price: 0 }, { label: '방수 커버', price: 8000 }]},
     ],
     deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'sign-board-water': {
+    name: '물통입간판',
+    category: { id: 'sign-board', name: '입간판' },
+    subcategory: '물통입간판',
+    basePrice: 48000,
+    thumbnail: 'https://picsum.photos/seed/bsign-water/800/800.webp',
+    images: ['https://picsum.photos/seed/bsign-water/800/800.webp'],
+    description: '물통형 입간판. 물통에 물을 채워 안정적 고정, 양면 포스터 교체 가능.',
+    specs: [{ label: '사이즈', value: '500×700mm' }, { label: '재질', value: 'PP + 철제 프레임' }, { label: '무게', value: '물통 포함 약 8kg' }],
+    options: [
+      { group: '사이즈', items: [{ label: '500×700mm', price: 48000 }, { label: '600×900mm', price: 58000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '양면 포스터 출력', price: 15000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'sign-board-stand': {
+    name: '사인스탠드',
+    category: { id: 'sign-board', name: '입간판' },
+    subcategory: '사인스탠드',
+    basePrice: 35000,
+    thumbnail: 'https://picsum.photos/seed/bsign-stand/800/800.webp',
+    images: ['https://picsum.photos/seed/bsign-stand/800/800.webp'],
+    description: '실내용 사인스탠드. 안내판, 메뉴판, 포스터 거치에 적합.',
+    specs: [{ label: '사이즈', value: 'A3 / A4' }, { label: '재질', value: '아크릴 + 스틸' }, { label: '무게', value: '약 1.5kg' }],
+    options: [
+      { group: '사이즈', items: [{ label: 'A3', price: 35000 }, { label: 'A4', price: 25000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '포스터 출력', price: 6000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'sign-board-a-print': {
+    name: 'A형입간판 출력물',
+    category: { id: 'sign-board-print', name: '입간판출력물' },
+    subcategory: 'A형입간판 출력물',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/sbprint-a/800/800.webp',
+    images: ['https://picsum.photos/seed/sbprint-a/800/800.webp'],
+    description: 'A형입간판 전용 포스터 출력물. 양면/단면 선택 가능.',
+    specs: [{ label: '사이즈', value: 'A1 (594×841mm) / A2 (420×594mm)' }, { label: '재질', value: '합성지 / 코팅지' }, { label: '인쇄', value: '고해상도 디지털 인쇄' }],
+    options: [
+      { group: '사이즈', items: [{ label: 'A1 사이즈', price: 12000 }, { label: 'A2 사이즈', price: 8000 }, { label: 'B1 사이즈', price: 15000 }]},
+      { group: '인쇄면', items: [{ label: '단면', price: 0 }, { label: '양면', price: 5000 }]},
+      { group: '라미네이팅', items: [{ label: '선택안함', price: 0 }, { label: '유광', price: 3000 }, { label: '무광', price: 3000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'sign-board-water-print': {
+    name: '물통입간판 출력물',
+    category: { id: 'sign-board-print', name: '입간판출력물' },
+    subcategory: '물통입간판 출력물',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/sbprint-w/800/800.webp',
+    images: ['https://picsum.photos/seed/sbprint-w/800/800.webp'],
+    description: '물통입간판 전용 출력물. 양면 인쇄 가능, 방수 코팅 옵션.',
+    specs: [{ label: '사이즈', value: '500×700mm / 600×900mm' }, { label: '재질', value: '합성지 (방수)' }, { label: '인쇄', value: '디지털 UV 인쇄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '500×700mm', price: 15000 }, { label: '600×900mm', price: 20000 }]},
+      { group: '인쇄면', items: [{ label: '단면', price: 0 }, { label: '양면', price: 6000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'sign-board-stand-print': {
+    name: '사인스탠드 출력물',
+    category: { id: 'sign-board-print', name: '입간판출력물' },
+    subcategory: '사인스탠드 출력물',
+    basePrice: 10000,
+    thumbnail: 'https://picsum.photos/seed/sbprint-s/800/800.webp',
+    images: ['https://picsum.photos/seed/sbprint-s/800/800.webp'],
+    description: '사인스탠드 전용 출력물. 다양한 사이즈 지원.',
+    specs: [{ label: '사이즈', value: 'A3 / A4 / B4' }, { label: '재질', value: '합성지' }, { label: '인쇄', value: '디지털 인쇄' }],
+    options: [
+      { group: '사이즈', items: [{ label: 'A3', price: 10000 }, { label: 'A4', price: 6000 }, { label: 'B4', price: 8000 }]},
+      { group: '라미네이팅', items: [{ label: '선택안함', price: 0 }, { label: '유광', price: 2000 }, { label: '무광', price: 2000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
     deadlines: { courier: '오전 11시', pickup: '오후 4시' },
   },
   'print-output-adhesive': {
@@ -200,21 +1035,342 @@ const PRODUCTS: Record<string, any> = {
     deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
     deadlines: { courier: '오전 11시', pickup: '오후 2시' },
   },
+  'print-non-adhesive': {
+    name: '실사출력 (비접착용)',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: '비접착용',
+    basePrice: 7000,
+    thumbnail: 'https://picsum.photos/seed/print-nonadh/800/800.webp',
+    images: ['https://picsum.photos/seed/print-nonadh/800/800.webp'],
+    description: '비접착형 실사출력. PP코팅, 합성지, 캔버스 등 다양한 소재로 출력. 포스터, 족자봉, 배너 등에 사용.',
+    specs: [
+      { label: '해상도', value: '1440dpi' },
+      { label: '재질', value: 'PP코팅 / 합성지 / 캔버스' },
+      { label: '단위', value: '평당 (㎡)' },
+      { label: '최소주문', value: '1㎡' },
+    ],
+    options: [
+      { group: '재질', items: [
+        { label: 'PP코팅지', price: 7000 },
+        { label: '합성지 (유포지)', price: 9000 },
+        { label: '캔버스', price: 15000 },
+        { label: '화이바 (백라이트용)', price: 12000 },
+      ]},
+      { group: '라미네이팅', items: [
+        { label: '선택안함', price: 0 },
+        { label: '유광 라미네이팅', price: 3000 },
+        { label: '무광 라미네이팅', price: 3000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '택배비 4,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'print-sheet-cutting': {
+    name: '시트커팅',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: '시트커팅',
+    basePrice: 5000,
+    thumbnail: 'https://picsum.photos/seed/print-cut/800/800.webp',
+    images: ['https://picsum.photos/seed/print-cut/800/800.webp'],
+    description: '시트지 커팅 전문. 로고, 문자, 도형 등 다양한 형태로 정밀 커팅. 유리면, 차량, 간판 등에 활용.',
+    specs: [
+      { label: '재질', value: '단색시트 / 인쇄시트 / 반사시트' },
+      { label: '최소사이즈', value: '10cm × 10cm' },
+      { label: '커팅방식', value: 'CNC 정밀 커팅' },
+      { label: '내구성', value: '실외 3~5년' },
+    ],
+    options: [
+      { group: '유형', items: [
+        { label: '단색 시트커팅', price: 5000 },
+        { label: '인쇄 시트커팅', price: 10000 },
+        { label: '반사 시트커팅', price: 15000 },
+      ]},
+      { group: '라미네이팅', items: [
+        { label: '선택안함', price: 0 },
+        { label: '유광 라미네이팅', price: 2000 },
+        { label: '무광 라미네이팅', price: 2000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '택배비 3,000원~' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'print-vehicle-magnet': {
+    name: '차량용 자석시트',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: '차량용자석',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/print-magnet/800/800.webp',
+    images: ['https://picsum.photos/seed/print-magnet/800/800.webp'],
+    description: '차량 부착용 자석시트 출력. 탈부착 간편, 차량 손상 없이 광고 효과. UV 인쇄로 선명한 색상.',
+    specs: [
+      { label: '재질', value: '자석시트 (0.8mm)' },
+      { label: '인쇄', value: 'UV 인쇄 (방수)' },
+      { label: '자력', value: '강력 자석 (주행 중 탈락 방지)' },
+      { label: '내구성', value: '실외 2~3년' },
+    ],
+    options: [
+      { group: '사이즈', items: [
+        { label: '300×200mm', price: 15000 },
+        { label: '450×300mm', price: 22000 },
+        { label: '600×400mm', price: 30000 },
+        { label: '900×600mm (차량 도어)', price: 45000 },
+      ]},
+      { group: '라미네이팅', items: [
+        { label: '유광 (기본)', price: 0 },
+        { label: '무광', price: 2000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '택배비 4,000원~' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'print-pop-board': {
+    name: 'POP·보드 출력',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: 'POP·보드',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/print-pop/800/800.webp',
+    images: ['https://picsum.photos/seed/print-pop/800/800.webp'],
+    description: 'POP 디스플레이, 포맥스보드, 아크릴보드 등 다양한 보드류 출력. 매장 POP, 안내판, 메뉴판 제작.',
+    specs: [
+      { label: '재질', value: '포맥스 / 아크릴 / 합판 / 하드보드' },
+      { label: '두께', value: '3mm ~ 10mm' },
+      { label: '인쇄', value: 'UV 다이렉트 인쇄' },
+      { label: '마감', value: '직각재단 / 라운드재단 / 윤곽재단' },
+    ],
+    options: [
+      { group: '재질', items: [
+        { label: '포맥스 3mm', price: 12000 },
+        { label: '포맥스 5mm', price: 18000 },
+        { label: '아크릴 3mm', price: 25000 },
+        { label: '합판 (MDF)', price: 20000 },
+      ]},
+      { group: '사이즈', items: [
+        { label: 'A3 (297×420mm)', price: 0 },
+        { label: 'A2 (420×594mm)', price: 5000 },
+        { label: 'A1 (594×841mm)', price: 12000 },
+        { label: 'A0 (841×1189mm)', price: 25000 },
+      ]},
+      { group: '마감', items: [
+        { label: '직각재단 (기본)', price: 0 },
+        { label: '라운드재단', price: 3000 },
+        { label: '윤곽재단', price: 8000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '택배비 5,000원~' },
+      { label: '착불택배', info: '수량별 차등' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'print-standee': {
+    name: '등신대 제작',
+    category: { id: 'print-output', name: '실사출력' },
+    subcategory: '등신대',
+    basePrice: 35000,
+    thumbnail: 'https://picsum.photos/seed/print-standee/800/800.webp',
+    images: ['https://picsum.photos/seed/print-standee/800/800.webp'],
+    description: '인물·캐릭터 등신대 전문 제작. 포맥스 10mm 윤곽재단, 양면 인쇄 가능. 이벤트, 매장, 전시 등에 활용.',
+    specs: [
+      { label: '재질', value: '포맥스 10mm' },
+      { label: '인쇄', value: 'UV 다이렉트 인쇄' },
+      { label: '마감', value: '윤곽재단 + 받침대' },
+      { label: '최대사이즈', value: '180cm' },
+    ],
+    options: [
+      { group: '유형', items: [
+        { label: '단면 등신대', price: 35000 },
+        { label: '양면 등신대', price: 55000 },
+      ]},
+      { group: '사이즈', items: [
+        { label: '소형 (~100cm)', price: 0 },
+        { label: '중형 (100~150cm)', price: 10000 },
+        { label: '대형 (150~180cm)', price: 20000 },
+      ]},
+      { group: '받침대', items: [
+        { label: '기본 받침대', price: 0 },
+        { label: '강화 받침대', price: 5000 },
+        { label: '접이식 받침대', price: 8000 },
+      ]},
+    ],
+    deliveryOptions: [
+      { label: '선불택배', info: '택배비 6,000원~ (사이즈별 차등)' },
+      { label: '방문수령', info: '서울 강남 사무실' },
+    ],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
   'scroll-basic': {
     name: '족자봉 (기본형)',
     category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
     subcategory: '족자봉',
-    basePrice: 12000,
+    basePrice: 7000,
     thumbnail: 'https://picsum.photos/seed/bscroll/800/800.webp',
     images: ['https://picsum.photos/seed/bscroll/800/800.webp'],
     description: '기본형 족자봉 세트. 포스터, 현수막 등을 걸어서 전시.',
     specs: [{ label: '길이', value: '600mm / 900mm / 1200mm' }, { label: '재질', value: '알루미늄' }],
     options: [
-      { group: '사이즈', items: [{ label: '600mm', price: 12000 }, { label: '900mm', price: 15000 }, { label: '1200mm', price: 18000 }]},
+      { group: '사이즈', items: [{ label: '600mm', price: 7000 }, { label: '900mm', price: 10000 }, { label: '1200mm', price: 14000 }]},
       { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 8000 }]},
     ],
     deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
     deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'scroll-wood': {
+    name: '족자봉 우드형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '족자봉',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/sb-wood/800/800.webp',
+    images: ['https://picsum.photos/seed/sb-wood/800/800.webp'],
+    description: '원목 마감 족자봉 세트. 인테리어용 포스터, 패브릭 포스터 걸이로 인기. 따뜻한 우드톤 마감.',
+    specs: [{ label: '길이', value: '600mm / 900mm / 1200mm' }, { label: '재질', value: '원목 (파인우드)' }, { label: '마감', value: '무광 우레탄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '600mm', price: 12000 }, { label: '900mm', price: 16000 }, { label: '1200mm', price: 20000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 8000 }]},
+      { group: '마감', items: [{ label: '내추럴 (기본)', price: 0 }, { label: '월넛 브라운', price: 3000 }, { label: '블랙', price: 3000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'scroll-magnetic': {
+    name: '족자봉 자석형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '족자봉',
+    basePrice: 15000,
+    thumbnail: 'https://picsum.photos/seed/sb-mag/800/800.webp',
+    images: ['https://picsum.photos/seed/sb-mag/800/800.webp'],
+    description: '자석 탈부착 방식 족자봉. 출력물을 쉽게 교체할 수 있어 매장, 카페 등에서 인기.',
+    specs: [{ label: '길이', value: '600mm / 900mm / 1200mm' }, { label: '재질', value: '알루미늄 + 자석' }, { label: '자석', value: '네오디뮴 N35' }],
+    options: [
+      { group: '사이즈', items: [{ label: '600mm', price: 15000 }, { label: '900mm', price: 19000 }, { label: '1200mm', price: 23000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 8000 }]},
+      { group: '컬러', items: [{ label: '실버 (기본)', price: 0 }, { label: '블랙', price: 2000 }, { label: '골드', price: 3000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'scroll-wide': {
+    name: '족자봉 광폭형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '족자봉',
+    basePrice: 20000,
+    thumbnail: 'https://picsum.photos/seed/sb-wide/800/800.webp',
+    images: ['https://picsum.photos/seed/sb-wide/800/800.webp'],
+    description: '1500mm 이상 대형 족자봉. 대형 포스터, 매장 현수막 걸이용. 알루미늄 광폭봉.',
+    specs: [{ label: '길이', value: '1500mm / 1800mm / 2000mm' }, { label: '재질', value: '알루미늄 (두꺼운 봉)' }, { label: '구성', value: '상·하봉 + 걸이줄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '1500mm', price: 20000 }, { label: '1800mm', price: 25000 }, { label: '2000mm', price: 30000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 15000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'rollblind-standard': {
+    name: '롤블라인드 일반형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '롤블라인드',
+    basePrice: 35000,
+    thumbnail: 'https://picsum.photos/seed/rb-std/800/800.webp',
+    images: ['https://picsum.photos/seed/rb-std/800/800.webp'],
+    description: '실사출력 롤블라인드. 창문, 파티션, 매장 인테리어용. 맞춤 사이즈 제작.',
+    specs: [{ label: '사이즈', value: '맞춤 제작 (가로×세로)' }, { label: '원단', value: '폴리에스터 (비방염)' }, { label: '출력', value: '디지털 UV 인쇄' }, { label: '구동', value: '체인 수동' }],
+    options: [
+      { group: '사이즈', items: [{ label: '900×1800mm', price: 35000 }, { label: '1200×1800mm', price: 45000 }, { label: '1500×1800mm', price: 55000 }, { label: '맞춤 사이즈', price: 40000 }]},
+      { group: '원단', items: [{ label: '일반 원단 (기본)', price: 0 }, { label: '고급 원단', price: 10000 }]},
+      { group: '설치', items: [{ label: '셀프 설치 (브라켓 포함)', price: 0 }, { label: '출장 설치 (서울/경기)', price: 30000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }, { label: '방문수령', info: '서울 강남 사무실' }],
+    deadlines: { courier: '3~5일 제작', pickup: '3~5일 제작' },
+  },
+  'rollblind-blackout': {
+    name: '롤블라인드 암막형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '롤블라인드',
+    basePrice: 45000,
+    thumbnail: 'https://picsum.photos/seed/rb-blk/800/800.webp',
+    images: ['https://picsum.photos/seed/rb-blk/800/800.webp'],
+    description: '빛 차단 암막 롤블라인드. 사무실, 회의실, 매장 쇼윈도우에 적합. 99% 차광.',
+    specs: [{ label: '사이즈', value: '맞춤 제작 (가로×세로)' }, { label: '원단', value: '암막 원단 (99% 차광)' }, { label: '출력', value: '디지털 UV 인쇄' }, { label: '구동', value: '체인 수동' }],
+    options: [
+      { group: '사이즈', items: [{ label: '900×1800mm', price: 45000 }, { label: '1200×1800mm', price: 58000 }, { label: '1500×1800mm', price: 70000 }, { label: '맞춤 사이즈', price: 50000 }]},
+      { group: '구동방식', items: [{ label: '체인 수동 (기본)', price: 0 }, { label: '스프링 자동', price: 15000 }]},
+      { group: '설치', items: [{ label: '셀프 설치 (브라켓 포함)', price: 0 }, { label: '출장 설치 (서울/경기)', price: 30000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }, { label: '방문수령', info: '서울 강남 사무실' }],
+    deadlines: { courier: '3~5일 제작', pickup: '3~5일 제작' },
+  },
+  'rollblind-fireproof': {
+    name: '롤블라인드 방염형',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '롤블라인드',
+    basePrice: 55000,
+    thumbnail: 'https://picsum.photos/seed/rb-fire/800/800.webp',
+    images: ['https://picsum.photos/seed/rb-fire/800/800.webp'],
+    description: '방염 인증 롤블라인드. 관공서, 학교, 병원 등 방염 필수 시설용. KFI 인증.',
+    specs: [{ label: '사이즈', value: '맞춤 제작 (가로×세로)' }, { label: '원단', value: '방염 원단 (KFI 인증)' }, { label: '출력', value: '디지털 UV 인쇄' }, { label: '구동', value: '체인 수동' }],
+    options: [
+      { group: '사이즈', items: [{ label: '900×1800mm', price: 55000 }, { label: '1200×1800mm', price: 70000 }, { label: '1500×1800mm', price: 85000 }, { label: '맞춤 사이즈', price: 60000 }]},
+      { group: '구동방식', items: [{ label: '체인 수동 (기본)', price: 0 }, { label: '스프링 자동', price: 15000 }]},
+      { group: '설치', items: [{ label: '셀프 설치 (브라켓 포함)', price: 0 }, { label: '출장 설치 (서울/경기)', price: 30000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }, { label: '방문수령', info: '서울 강남 사무실' }],
+    deadlines: { courier: '5~7일 제작', pickup: '5~7일 제작' },
+  },
+  'scroll-accessory': {
+    name: '족자봉 부속 세트',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '부속품',
+    basePrice: 3000,
+    thumbnail: 'https://picsum.photos/seed/sb-acc/800/800.webp',
+    images: ['https://picsum.photos/seed/sb-acc/800/800.webp'],
+    description: '족자봉 교체용 부속 세트. 걸이줄, 고리, 마감캡 등 교체 부품.',
+    specs: [{ label: '구성', value: '걸이줄 + 고리 + 마감캡 2개' }, { label: '호환', value: '전 사이즈 공용' }],
+    options: [
+      { group: '부속 종류', items: [{ label: '걸이줄+고리 세트', price: 3000 }, { label: '마감캡 세트 (2개)', price: 2000 }, { label: '전체 부속 세트', price: 5000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '당일출고', pickup: '당일수령' },
+  },
+  'rollblind-chain': {
+    name: '롤블라인드 체인 세트',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '부속품',
+    basePrice: 5000,
+    thumbnail: 'https://picsum.photos/seed/rb-chain/800/800.webp',
+    images: ['https://picsum.photos/seed/rb-chain/800/800.webp'],
+    description: '롤블라인드 교체용 체인 세트. 클러치, 체인, 커넥터 포함.',
+    specs: [{ label: '구성', value: '체인 + 클러치 + 커넥터' }, { label: '길이', value: '1000mm / 1500mm' }],
+    options: [
+      { group: '체인 길이', items: [{ label: '1000mm', price: 5000 }, { label: '1500mm', price: 6000 }]},
+      { group: '컬러', items: [{ label: '화이트', price: 0 }, { label: '실버', price: 0 }, { label: '블랙', price: 0 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '당일출고', pickup: '당일수령' },
+  },
+  'rollblind-bracket': {
+    name: '롤블라인드 브라켓 세트',
+    category: { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+    subcategory: '부속품',
+    basePrice: 7000,
+    thumbnail: 'https://picsum.photos/seed/rb-bracket/800/800.webp',
+    images: ['https://picsum.photos/seed/rb-bracket/800/800.webp'],
+    description: '롤블라인드 설치용 브라켓 세트. 천정형·벽면형 겸용.',
+    specs: [{ label: '구성', value: '브라켓 2개 + 나사 세트' }, { label: '타입', value: '천정형/벽면형 겸용' }, { label: '재질', value: '스틸 (도금)' }],
+    options: [
+      { group: '브라켓 타입', items: [{ label: '일반형 (28mm)', price: 7000 }, { label: '대형 (38mm)', price: 9000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '당일출고', pickup: '당일수령' },
   },
   'custom-payment': {
     name: '고객맞춤결제',
@@ -231,15 +1387,363 @@ const PRODUCTS: Record<string, any> = {
     deliveryOptions: [{ label: '상담 후 안내', info: '' }],
     deadlines: { courier: '-', pickup: '-' },
   },
+  // === 배너거치대 서브카테고리 상품 ===
+  'banner-stand-outdoor-m': {
+    name: '실외 배너거치대 (중형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '실외거치대',
+    basePrice: 38000,
+    thumbnail: 'https://picsum.photos/seed/bstand2/800/800.webp',
+    images: ['https://picsum.photos/seed/bstand2/800/800.webp'],
+    description: '야외 행사·매장 앞 홍보용 중형 배너 거치대. 가벼운 무게에 안정적인 구조.',
+    specs: [{ label: '사이즈', value: '500×1500mm' }, { label: '재질', value: '스틸 프레임' }, { label: '무게', value: '약 3.8kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '실외 중형 (500×1500)', price: 38000 }, { label: '실외 소형 (400×1200)', price: 32000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 8000 }, { label: '양면 출력', price: 14000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '로젠택배 4,000원~' }, { label: '착불택배', info: '수량별 차등' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-indoor': {
+    name: '실내 배너거치대 (접이식)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '실내거치대',
+    basePrice: 35000,
+    thumbnail: 'https://picsum.photos/seed/bindoor/800/800.webp',
+    images: ['https://picsum.photos/seed/bindoor/800/800.webp'],
+    description: '실내 전시·안내용 접이식 배너 거치대. 간편한 설치와 이동.',
+    specs: [{ label: '사이즈', value: '600×1600mm' }, { label: '재질', value: '알루미늄 프레임' }, { label: '무게', value: '약 2.5kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '접이식 (600×1600)', price: 35000 }, { label: '접이식 (800×1800)', price: 45000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 8000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-steel': {
+    name: '철제거치대 (일반형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '철제거치대',
+    basePrice: 55000,
+    thumbnail: 'https://picsum.photos/seed/bsteel/800/800.webp',
+    images: ['https://picsum.photos/seed/bsteel/800/800.webp'],
+    description: '내구성 높은 철제 배너 거치대. 장기 야외 사용에 적합.',
+    specs: [{ label: '사이즈', value: '600×1800mm' }, { label: '재질', value: '철제 프레임 (도장)' }, { label: '무게', value: '약 7.5kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '일반형 (600×1800)', price: 55000 }, { label: '대형 (800×2000)', price: 75000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 10000 }, { label: '양면 출력', price: 18000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 6,000원~' }, { label: '착불택배', info: '수량별 차등' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-giant-3m': {
+    name: '자이언트폴 (3m)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '자이언트폴',
+    basePrice: 85000,
+    thumbnail: 'https://picsum.photos/seed/bgiant/800/800.webp',
+    images: ['https://picsum.photos/seed/bgiant/800/800.webp'],
+    description: '3m 높이 자이언트폴 거치대. 원거리 시인성 확보.',
+    specs: [{ label: '총 높이', value: '3,000mm' }, { label: '출력면', value: '800×2,400mm' }, { label: '베이스', value: '십자 베이스 (8kg)' }],
+    options: [
+      { group: '거치대', items: [{ label: '3m 자이언트폴 + 십자베이스', price: 85000 }, { label: '3m 자이언트폴 + 물통베이스', price: 95000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 20000 }, { label: '양면 출력', price: 35000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 8,000원~' }, { label: '착불택배', info: '수량별 차등' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-mini-desk': {
+    name: '미니배너 (탁상형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '미니배너',
+    basePrice: 18000,
+    thumbnail: 'https://picsum.photos/seed/bmini/800/800.webp',
+    images: ['https://picsum.photos/seed/bmini/800/800.webp'],
+    description: '탁상 위 미니 배너 거치대. 카운터·접수대·안내대용.',
+    specs: [{ label: '사이즈', value: '210×297mm (A4)' }, { label: '재질', value: '아크릴+알루미늄' }, { label: '무게', value: '약 0.5kg' }],
+    options: [
+      { group: '거치대', items: [{ label: 'A4 탁상형', price: 18000 }, { label: 'A3 탁상형', price: 25000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 5000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-special-rotate': {
+    name: '특수배너 (회전형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '특수배너',
+    basePrice: 95000,
+    thumbnail: 'https://picsum.photos/seed/bspecial/800/800.webp',
+    images: ['https://picsum.photos/seed/bspecial/800/800.webp'],
+    description: '360도 회전형 특수 배너 거치대. 전시·이벤트용.',
+    specs: [{ label: '사이즈', value: '600×1800mm' }, { label: '재질', value: '알루미늄+스틸' }, { label: '회전', value: '360도 수동 회전' }],
+    options: [
+      { group: '거치대', items: [{ label: '회전형 일반', price: 95000 }, { label: '회전형 대형', price: 130000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '양면 출력', price: 18000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 6,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-acc-water': {
+    name: '배너 물통베이스',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '부속품',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/bacc1/800/800.webp',
+    images: ['https://picsum.photos/seed/bacc1/800/800.webp'],
+    description: '배너 거치대용 물통 베이스. 물 충전으로 안정적 고정.',
+    specs: [{ label: '용량', value: '15L' }, { label: '재질', value: 'PE' }, { label: '무게 (물 충전 시)', value: '약 15kg' }],
+    options: [
+      { group: '베이스', items: [{ label: '물통베이스 15L', price: 12000 }, { label: '물통베이스 20L', price: 15000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-indoor-fixed': {
+    name: '실내 배너거치대 (고정형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '실내거치대',
+    basePrice: 42000,
+    thumbnail: 'https://picsum.photos/seed/bindoor-fix/800/800.webp',
+    images: ['https://picsum.photos/seed/bindoor-fix/800/800.webp'],
+    description: '실내 전시·로비용 고정형 배너 거치대. 안정적인 고정 구조로 흔들림 없이 사용 가능.',
+    specs: [{ label: '사이즈', value: '600×1600mm' }, { label: '재질', value: '알루미늄 프레임 + 철판 베이스' }, { label: '무게', value: '약 3.5kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '고정형 (600×1600)', price: 42000 }, { label: '고정형 (800×1800)', price: 52000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 8000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-steel-l': {
+    name: '철제거치대 (대형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '철제거치대',
+    basePrice: 75000,
+    thumbnail: 'https://picsum.photos/seed/bsteel-l/800/800.webp',
+    images: ['https://picsum.photos/seed/bsteel-l/800/800.webp'],
+    description: '대형 철제 배너 거치대. 장기간 야외 설치에 최적화된 고강도 프레임.',
+    specs: [{ label: '사이즈', value: '800×2000mm' }, { label: '재질', value: '철제 프레임 (분체 도장)' }, { label: '무게', value: '약 10.5kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '대형 (800×2000)', price: 75000 }, { label: '특대형 (1000×2400)', price: 95000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 12000 }, { label: '양면 출력', price: 22000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 8,000원~' }, { label: '착불택배', info: '수량별 차등' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-giant-5m': {
+    name: '자이언트폴 (5m)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '자이언트폴',
+    basePrice: 120000,
+    thumbnail: 'https://picsum.photos/seed/bgiant5/800/800.webp',
+    images: ['https://picsum.photos/seed/bgiant5/800/800.webp'],
+    description: '5m 높이 자이언트폴 거치대. 대형 행사·주차장·도로변 광고에 탁월한 원거리 시인성.',
+    specs: [{ label: '총 높이', value: '5,000mm' }, { label: '출력면', value: '1000×4,000mm' }, { label: '베이스', value: '십자 베이스 (12kg)' }],
+    options: [
+      { group: '거치대', items: [{ label: '5m 자이언트폴 + 십자베이스', price: 120000 }, { label: '5m 자이언트폴 + 물통베이스', price: 135000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '단면 출력', price: 35000 }, { label: '양면 출력', price: 55000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 10,000원~' }, { label: '착불택배', info: '수량별 차등' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-mini-stand': {
+    name: '미니배너 (스탠드형)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '미니배너',
+    basePrice: 25000,
+    thumbnail: 'https://picsum.photos/seed/bmini-stand/800/800.webp',
+    images: ['https://picsum.photos/seed/bmini-stand/800/800.webp'],
+    description: '스탠드형 미니 배너 거치대. 매장 입구·행사장 안내용으로 적합.',
+    specs: [{ label: '사이즈', value: '300×600mm' }, { label: '재질', value: '알루미늄+아크릴' }, { label: '무게', value: '약 1.2kg' }],
+    options: [
+      { group: '거치대', items: [{ label: '스탠드형 (300×600)', price: 25000 }, { label: '스탠드형 (400×800)', price: 32000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '출력물 포함', price: 7000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-special-electric': {
+    name: '특수배너 (양면 전동)',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '특수배너',
+    basePrice: 150000,
+    thumbnail: 'https://picsum.photos/seed/bspecial-elec/800/800.webp',
+    images: ['https://picsum.photos/seed/bspecial-elec/800/800.webp'],
+    description: '양면 전동 회전 특수 배너 거치대. 자동 회전으로 양면 광고 노출 극대화.',
+    specs: [{ label: '사이즈', value: '600×1800mm' }, { label: '재질', value: '알루미늄+스틸' }, { label: '회전', value: '양면 전동 자동 회전' }],
+    options: [
+      { group: '거치대', items: [{ label: '양면전동 일반 (600×1800)', price: 150000 }, { label: '양면전동 대형 (800×2000)', price: 195000 }]},
+      { group: '출력물', items: [{ label: '선택안함', price: 0 }, { label: '양면 출력', price: 20000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 8,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-acc-sand': {
+    name: '배너 모래주머니',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '부속품',
+    basePrice: 5000,
+    thumbnail: 'https://picsum.photos/seed/bacc-sand/800/800.webp',
+    images: ['https://picsum.photos/seed/bacc-sand/800/800.webp'],
+    description: '배너 거치대 고정용 모래주머니. 실외 사용 시 바람 전도 방지.',
+    specs: [{ label: '용량', value: '5kg' }, { label: '재질', value: '옥스포드 원단' }],
+    options: [
+      { group: '모래주머니', items: [{ label: '모래주머니 5kg', price: 5000 }, { label: '모래주머니 10kg', price: 8000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  'banner-stand-acc-clip': {
+    name: '배너 연결클립',
+    category: { id: 'banner-stand', name: '배너거치대' },
+    subcategory: '부속품',
+    basePrice: 3000,
+    thumbnail: 'https://picsum.photos/seed/bacc-clip/800/800.webp',
+    images: ['https://picsum.photos/seed/bacc-clip/800/800.webp'],
+    description: '배너 출력물 연결용 클립. 출력물 교체 시 간편하게 탈부착 가능.',
+    specs: [{ label: '재질', value: '스테인리스 스틸' }, { label: '수량', value: '4개 1세트' }],
+    options: [
+      { group: '클립', items: [{ label: '연결클립 4개 세트', price: 3000 }, { label: '연결클립 8개 세트', price: 5500 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 4시' },
+  },
+  // === 배너출력물 상품 ===
+  'banner-print-standard': {
+    name: '배너출력물 (단면)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '배너출력물',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/bprt1/800/800.webp',
+    images: ['https://picsum.photos/seed/bprt1/800/800.webp'],
+    description: '실외 배너 거치대용 단면 출력물. 고해상도 디지털 인쇄.',
+    specs: [{ label: '인쇄', value: '디지털 솔벤 인쇄' }, { label: '해상도', value: '1440dpi' }, { label: '재질', value: '터폴린' }],
+    options: [
+      { group: '사이즈', items: [{ label: '600×1800mm', price: 12000 }, { label: '500×1500mm', price: 10000 }, { label: '800×2000mm', price: 18000 }]},
+      { group: '마감', items: [{ label: '열재단 (기본)', price: 0 }, { label: '봉주머니 마감', price: 3000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-double': {
+    name: '배너출력물 (양면)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '배너출력물',
+    basePrice: 20000,
+    thumbnail: 'https://picsum.photos/seed/bprt2/800/800.webp',
+    images: ['https://picsum.photos/seed/bprt2/800/800.webp'],
+    description: '실외 배너 거치대용 양면 출력물. 앞뒤 다른 디자인 가능.',
+    specs: [{ label: '인쇄', value: '디지털 솔벤 인쇄 (양면)' }, { label: '해상도', value: '1440dpi' }, { label: '재질', value: '터폴린 (양면)' }],
+    options: [
+      { group: '사이즈', items: [{ label: '600×1800mm', price: 20000 }, { label: '500×1500mm', price: 16000 }, { label: '800×2000mm', price: 28000 }]},
+      { group: '마감', items: [{ label: '열재단 (기본)', price: 0 }, { label: '봉주머니 마감', price: 4000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-giant-3m': {
+    name: '자이언트폴 출력물 (3m)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '자이언트폴 출력물',
+    basePrice: 25000,
+    thumbnail: 'https://picsum.photos/seed/bprtg1/800/800.webp',
+    images: ['https://picsum.photos/seed/bprtg1/800/800.webp'],
+    description: '3m 자이언트폴용 출력물. 고화질 대형 인쇄.',
+    specs: [{ label: '사이즈', value: '800×2,400mm' }, { label: '재질', value: '터폴린 (방수)' }, { label: '인쇄', value: '솔벤 1440dpi' }],
+    options: [
+      { group: '사이즈', items: [{ label: '3m폴용 (800×2400)', price: 25000 }]},
+      { group: '인쇄', items: [{ label: '단면', price: 0 }, { label: '양면', price: 15000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-giant-5m': {
+    name: '자이언트폴 출력물 (5m)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '자이언트폴 출력물',
+    basePrice: 40000,
+    thumbnail: 'https://picsum.photos/seed/bprtg2/800/800.webp',
+    images: ['https://picsum.photos/seed/bprtg2/800/800.webp'],
+    description: '5m 자이언트폴용 대형 출력물.',
+    specs: [{ label: '사이즈', value: '1000×4,000mm' }, { label: '재질', value: '터폴린 (방수)' }, { label: '인쇄', value: '솔벤 1440dpi' }],
+    options: [
+      { group: '사이즈', items: [{ label: '5m폴용 (1000×4000)', price: 40000 }]},
+      { group: '인쇄', items: [{ label: '단면', price: 0 }, { label: '양면', price: 25000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-mini-desk': {
+    name: '미니배너 출력물 (탁상형)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '미니배너 출력물',
+    basePrice: 8000,
+    thumbnail: 'https://picsum.photos/seed/bprtm1/800/800.webp',
+    images: ['https://picsum.photos/seed/bprtm1/800/800.webp'],
+    description: '탁상형 미니배너용 출력물.',
+    specs: [{ label: '사이즈', value: '210×297mm (A4)' }, { label: '재질', value: '포토인화지' }, { label: '인쇄', value: '고화질 UV' }],
+    options: [
+      { group: '사이즈', items: [{ label: 'A4 (210×297)', price: 8000 }, { label: 'A3 (297×420)', price: 12000 }]},
+      { group: '코팅', items: [{ label: '무코팅', price: 0 }, { label: '유광 코팅', price: 2000 }, { label: '무광 코팅', price: 2000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-mini-stand': {
+    name: '미니배너 출력물 (스탠드형)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '미니배너 출력물',
+    basePrice: 12000,
+    thumbnail: 'https://picsum.photos/seed/bprtm2/800/800.webp',
+    images: ['https://picsum.photos/seed/bprtm2/800/800.webp'],
+    description: '스탠드형 미니배너용 출력물.',
+    specs: [{ label: '사이즈', value: '300×600mm' }, { label: '재질', value: '합성지' }, { label: '인쇄', value: 'UV 1440dpi' }],
+    options: [
+      { group: '사이즈', items: [{ label: '300×600mm', price: 12000 }, { label: '400×800mm', price: 16000 }]},
+      { group: '마감', items: [{ label: '열재단 (기본)', price: 0 }, { label: '봉주머니', price: 2000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 3,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-special-rotate': {
+    name: '특수배너 출력물 (회전형)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '특수배너 출력물',
+    basePrice: 30000,
+    thumbnail: 'https://picsum.photos/seed/bprts1/800/800.webp',
+    images: ['https://picsum.photos/seed/bprts1/800/800.webp'],
+    description: '회전형 특수배너 거치대 전용 출력물.',
+    specs: [{ label: '사이즈', value: '600×1800mm' }, { label: '재질', value: '터폴린 (고급)' }, { label: '인쇄', value: '라텍스 인쇄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '일반 (600×1800)', price: 30000 }, { label: '대형 (800×2000)', price: 42000 }]},
+      { group: '인쇄', items: [{ label: '단면', price: 0 }, { label: '양면', price: 18000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 4,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
+  'banner-print-special-electric': {
+    name: '특수배너 출력물 (전동형)',
+    category: { id: 'banner-print', name: '배너출력물' },
+    subcategory: '특수배너 출력물',
+    basePrice: 45000,
+    thumbnail: 'https://picsum.photos/seed/bprts2/800/800.webp',
+    images: ['https://picsum.photos/seed/bprts2/800/800.webp'],
+    description: '전동형 특수배너 거치대 전용 출력물.',
+    specs: [{ label: '사이즈', value: '800×2000mm' }, { label: '재질', value: '합성지 (고급)' }, { label: '인쇄', value: '라텍스 인쇄' }],
+    options: [
+      { group: '사이즈', items: [{ label: '표준 (800×2000)', price: 45000 }]},
+      { group: '인쇄', items: [{ label: '단면', price: 0 }, { label: '양면', price: 25000 }]},
+    ],
+    deliveryOptions: [{ label: '선불택배', info: '택배비 5,000원~' }],
+    deadlines: { courier: '오전 11시', pickup: '오후 2시' },
+  },
 };
 
-const product = PRODUCTS[slug as string];
-if (!product) return Astro.redirect('/banner');
-
-export async function getStaticPaths() {
-  const slugs = ['banner-stand-outdoor-l','banner-cloth-normal','wind-banner-f-s','sign-board-a','print-output-adhesive','scroll-basic','custom-payment'];
-  return slugs.map(s => ({ params: { slug: s } }));
+  product = PRODUCTS[slug as string];
 }
+
+if (!product) return Astro.redirect('/banner');
 ---
 
 <Layout title={`${product.name} - issac.design 배너`} description={product.description}>
@@ -671,13 +2175,13 @@ export async function getStaticPaths() {
           </button>
         </div>
 
-        {product.options.map((opt: any) => (
+        {(product.options || []).map((opt: any) => (
           <div class="pd-option-group">
             <label class="pd-option-label">{opt.group}</label>
             <div class="pd-qty-row">
               <select class="pd-option-select" data-group={opt.group}>
-                {opt.items.map((item: any) => (
-                  <option value={item.price}>{item.label}{item.price > 0 ? ` (+${item.price.toLocaleString()}원)` : ''}</option>
+                {(opt.items || []).map((item: any) => (
+                  <option value={item.price}>{item.label}{item.price > 0 ? ` (+${item.price.toLocaleString()}원)` : item.price < 0 ? ` (${item.price.toLocaleString()}원)` : ''}</option>
                 ))}
               </select>
               <input type="number" class="pd-qty-input" value="1" min="1" data-group={opt.group} />
@@ -690,8 +2194,8 @@ export async function getStaticPaths() {
         <div class="pd-delivery">
           <label class="pd-option-label">배송방법</label>
           <select class="pd-delivery-select" id="delivery-select">
-            {product.deliveryOptions.map((d: any) => (
-              <option value={d.label}>{d.label}</option>
+            {(product.deliveryOptions || []).map((d: any) => (
+              <option value={d.label} data-info={d.info || ''}>{d.label}</option>
             ))}
           </select>
           <div class="pd-delivery-info" id="delivery-info">
@@ -729,10 +2233,10 @@ export async function getStaticPaths() {
         </div>
 
         <div id="summary-rows">
-          {product.options.map((opt: any) => (
+          {(product.options || []).map((opt: any) => (
             <div class="pd-summary-row" data-summary={opt.group}>
               <span>{opt.group}</span>
-              <span class="val">{opt.items[0].price > 0 ? `${opt.items[0].price.toLocaleString()}원` : '0원'}</span>
+              <span class="val">{opt.items?.[0]?.price > 0 ? `${opt.items[0].price.toLocaleString()}원` : '0원'}</span>
             </div>
           ))}
         </div>
@@ -746,16 +2250,16 @@ export async function getStaticPaths() {
 
         <div class="pd-summary-row">
           <span>상품금액</span>
-          <span class="val" id="summary-subtotal">{product.basePrice.toLocaleString()}원</span>
+          <span class="val" id="summary-subtotal">{((product.options || []).reduce((s: number, o: any) => s + (o.items?.[0]?.price || 0), 0)).toLocaleString()}원</span>
         </div>
         <div class="pd-summary-row">
           <span>부가세</span>
-          <span class="val" id="summary-tax">{Math.round(product.basePrice * 0.1).toLocaleString()}원</span>
+          <span class="val" id="summary-tax">{Math.round((product.options || []).reduce((s: number, o: any) => s + (o.items?.[0]?.price || 0), 0) * 0.1).toLocaleString()}원</span>
         </div>
 
         <div class="pd-summary-total">
           <span class="label">최종금액</span>
-          <span class="price" id="summary-total">{Math.round(product.basePrice * 1.1).toLocaleString()}<span class="won">원</span></span>
+          <span class="price" id="summary-total">{Math.round((product.options || []).reduce((s: number, o: any) => s + (o.items?.[0]?.price || 0), 0) * 1.1).toLocaleString()}<span class="won">원</span></span>
         </div>
 
         <div class="pd-actions">
@@ -831,15 +2335,13 @@ export async function getStaticPaths() {
   // Price calculation
   const selects = document.querySelectorAll<HTMLSelectElement>('.pd-option-select');
   const qtys = document.querySelectorAll<HTMLInputElement>('.pd-qty-input');
-  const summaryRows = document.querySelectorAll<HTMLElement>('[data-summary]');
-
   function calc() {
     let total = 0;
     let totalQty = 0;
 
     selects.forEach((sel, i) => {
       const price = Number(sel.value) || 0;
-      const qty = Number(qtys[i]?.value) || 1;
+      const qty = Math.max(1, Number(qtys[i]?.value) || 1);
       const lineTotal = price * qty;
       total += lineTotal;
       totalQty += qty;
@@ -850,6 +2352,7 @@ export async function getStaticPaths() {
       if (row) row.textContent = lineTotal.toLocaleString() + '원';
     });
 
+    total = Math.max(0, total);
     const tax = Math.round(total * 0.1);
     const grand = total + tax;
 
@@ -876,6 +2379,16 @@ export async function getStaticPaths() {
       thumb.classList.add('active');
     });
   });
+
+  // Delivery select change handler
+  const deliverySelect = document.getElementById('delivery-select') as HTMLSelectElement | null;
+  const deliveryInfoEl = document.getElementById('delivery-info');
+  if (deliverySelect && deliveryInfoEl) {
+    deliverySelect.addEventListener('change', () => {
+      const selected = deliverySelect.selectedOptions[0];
+      deliveryInfoEl.textContent = selected?.dataset.info || '';
+    });
+  }
 
   // Cart / Order buttons
   document.querySelector('.pd-btn-cart')?.addEventListener('click', () => {

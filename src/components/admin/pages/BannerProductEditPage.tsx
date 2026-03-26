@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabaseBrowser as supabase } from '../../../lib/supabase-browser';
 import { FormField, TabNav, ImageUploader, ImageListEditor, KeyValueEditor } from '../ui';
@@ -7,13 +7,29 @@ import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
 
 const BANNER_CATEGORIES = [
   { id: 'banner-stand', name: '배너거치대' },
+  { id: 'banner-print', name: '배너출력물' },
   { id: 'banner-cloth', name: '현수막' },
+  { id: 'banner-cloth-bulk', name: '대량현수막' },
   { id: 'wind-banner', name: '윈드배너' },
   { id: 'sign-board', name: '입간판' },
+  { id: 'sign-board-print', name: '입간판출력물' },
   { id: 'print-output', name: '실사출력' },
   { id: 'scroll-blind', name: '족자봉·롤블라인드' },
   { id: 'custom-payment', name: '고객맞춤결제' },
 ];
+
+const SUBCATEGORY_MAP: Record<string, string[]> = {
+  'banner-stand': ['실외거치대', '실내거치대', '철제거치대', '자이언트폴', '미니배너', '특수배너', '부속품'],
+  'banner-print': ['배너출력물', '자이언트폴 출력물', '미니배너 출력물', '특수배너 출력물'],
+  'banner-cloth': ['일반현수막', '장폭현수막', '솔벤현수막', '라텍스현수막', '테이블현수막', '열전사메쉬', '텐트천', '부직포', '부속품'],
+  'banner-cloth-bulk': ['게릴라현수막', '족자현수막', '게시대현수막', '어깨띠'],
+  'wind-banner': ['윈드배너F형', '윈드배너S형', '윈드배너H형', '부속품', 'F형 출력물', 'S형 출력물', 'H형 출력물'],
+  'sign-board': ['A형입간판', '물통입간판', '사인스탠드', '부속품'],
+  'sign-board-print': ['A형입간판 출력물', '물통입간판 출력물', '사인스탠드 출력물'],
+  'print-output': ['접착용', '비접착용', '시트커팅', '차량용자석', 'POP·보드', '등신대'],
+  'scroll-blind': ['족자봉', '롤블라인드', '부속품'],
+  'custom-payment': ['고객맞춤결제', '디자인비결제', '배송비결제'],
+};
 
 const TABS = [
   { key: 'basic', label: '기본 정보' },
@@ -172,6 +188,34 @@ export default function BannerProductEditPage() {
     if (!form.category_id) { toast.error('카테고리를 선택하세요'); return; }
 
     setSaving(true);
+
+    // slug 중복 검사 (신규 등록 시)
+    if (isNew) {
+      const { data: existing } = await supabase.from('products').select('id').eq('slug', form.slug).maybeSingle();
+      if (existing) {
+        toast.error('이미 사용 중인 슬러그입니다: ' + form.slug);
+        setSaving(false);
+        return;
+      }
+    }
+
+    // 카테고리 존재 보장 (FK 제약 방지)
+    const catIdx = BANNER_CATEGORIES.findIndex(c => c.id === form.category_id);
+    const catName = catIdx >= 0 ? BANNER_CATEGORIES[catIdx].name : form.category_id;
+    const catOrder = catIdx >= 0 ? 100 + catIdx : 200;
+    const { error: catError } = await supabase.from('product_categories').upsert({
+      id: form.category_id,
+      name: catName,
+      order_index: catOrder,
+      is_visible: true,
+    } as any, { onConflict: 'id' });
+    if (catError) {
+      toast.error('카테고리 생성 실패: ' + catError.message);
+      setSaving(false);
+      return;
+    }
+
+    const now = new Date().toISOString();
     const payload = {
       name: form.name,
       slug: form.slug,
@@ -182,6 +226,7 @@ export default function BannerProductEditPage() {
       images: form.images,
       specs: form.specs,
       is_visible: form.is_visible,
+      updated_at: now,
       options: {
         subcategory: form.subcategory,
         base_price: form.base_price,
@@ -194,7 +239,7 @@ export default function BannerProductEditPage() {
 
     let error;
     if (isNew) {
-      ({ error } = await supabase.from('products').insert({ ...payload, id: crypto.randomUUID() } as any));
+      ({ error } = await supabase.from('products').insert({ ...payload, id: crypto.randomUUID(), created_at: now } as any));
     } else {
       ({ error } = await supabase.from('products').update(payload as any).eq('id', id!));
     }
@@ -224,7 +269,7 @@ export default function BannerProductEditPage() {
         </div>
       </div>
 
-      <TabNav tabs={TABS} active={tab} onChange={setTab} />
+      <TabNav tabs={TABS} activeTab={tab} onChange={setTab} />
 
       <div className="admin-card" style={{ padding: 24 }}>
         {/* === 기본 정보 === */}
@@ -240,13 +285,36 @@ export default function BannerProductEditPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <FormField label="카테고리" required>
-                <select className="admin-select" value={form.category_id} onChange={e => updateField('category_id', e.target.value)}>
+                <select className="admin-select" value={form.category_id} onChange={e => { updateField('category_id', e.target.value); updateField('subcategory', ''); }}>
                   <option value="">선택하세요</option>
                   {BANNER_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </FormField>
               <FormField label="소분류">
-                <input className="admin-input" value={form.subcategory} onChange={e => updateField('subcategory', e.target.value)} placeholder="예: 윈드배너F형" />
+                {form.category_id && SUBCATEGORY_MAP[form.category_id] ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <select
+                      className="admin-select"
+                      value={SUBCATEGORY_MAP[form.category_id].includes(form.subcategory) ? form.subcategory : ''}
+                      onChange={e => updateField('subcategory', e.target.value)}
+                    >
+                      <option value="">선택하세요</option>
+                      {SUBCATEGORY_MAP[form.category_id].map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                    {!SUBCATEGORY_MAP[form.category_id].includes(form.subcategory) && (
+                      <input
+                        className="admin-input"
+                        value={form.subcategory}
+                        onChange={e => updateField('subcategory', e.target.value)}
+                        placeholder="또는 직접 입력"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <input className="admin-input" value={form.subcategory} onChange={e => updateField('subcategory', e.target.value)} placeholder="카테고리를 먼저 선택하세요" />
+                )}
               </FormField>
             </div>
 
@@ -344,7 +412,7 @@ export default function BannerProductEditPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div>
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>상품 사양</h3>
-              <KeyValueEditor data={form.specs} onChange={v => updateField('specs', v)} keyLabel="항목" valueLabel="내용" />
+              <KeyValueEditor entries={form.specs} onChange={v => updateField('specs', v)} keyLabel="항목" valueLabel="내용" />
             </div>
 
             <div>
