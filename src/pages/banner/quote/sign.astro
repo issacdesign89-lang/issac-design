@@ -1,0 +1,346 @@
+---
+/**
+ * 사인물 견적 페이지
+ * 폼보드, 포맥스, 아크릴현판, 등신대, 고무자석 5개 제품 견적 계산기
+ * BannerHeader 공통 헤더 + QuoteCalculator 클라이언트사이드 렌더링
+ */
+import Layout from '../../../layouts/Layout.astro';
+import BannerHeader from '../../../components/banner/BannerHeader.astro';
+import QuoteCalculator from '../../../components/banner/QuoteCalculator';
+import { SIGN_PRODUCTS } from '../../../data/pricing/products-sign';
+
+// --- 연락처 기본값 ---
+const FALLBACK_CONTACT = {
+  company: 'issac.design',
+  phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123',
+  email: 'contact@issac.design',
+};
+
+// --- 서비스 기본값 ---
+const FALLBACK_SERVICES = [
+  { icon: 'banner', title: '배너·거치대', desc: '실내외 배너 거치대 전문 제작·판매' },
+  { icon: 'banner', title: '현수막', desc: '일반·장폭·솔벤·라텍스 현수막 제작' },
+  { icon: 'banner', title: '윈드배너', desc: 'F형·S형·H형 윈드배너 거치대·출력' },
+  { icon: 'banner', title: '입간판', desc: 'A형·물통·사인스탠드 입간판 제작' },
+  { icon: 'banner', title: '실사출력', desc: '접착·비접착·시트커팅·차량용 출력' },
+  { icon: 'banner', title: '족자봉·롤블라인드', desc: '족자봉, 롤블라인드 제작·판매' },
+];
+
+// --- 카테고리 (메가메뉴용) ---
+const categories = [
+  { id: 'banner-stand', name: '배너거치대' },
+  { id: 'banner-print', name: '배너출력물' },
+  { id: 'banner-cloth', name: '현수막' },
+  { id: 'wind-banner', name: '윈드배너' },
+  { id: 'sign-board', name: '입간판' },
+  { id: 'print-output', name: '실사출력' },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+];
+
+// --- 소분류 매핑 ---
+const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
+  '배너거치대': [
+    { label: '실외거치대', href: '/banner/category/banner-stand?sub=실외거치대' },
+    { label: '실내거치대', href: '/banner/category/banner-stand?sub=실내거치대' },
+  ],
+  '배너출력물': [
+    { label: '배너출력물', href: '/banner/category/banner-print?sub=배너출력물' },
+  ],
+  '현수막': [
+    { label: '일반현수막', href: '/banner/category/banner-cloth?sub=일반현수막' },
+    { label: '장폭현수막', href: '/banner/category/banner-cloth?sub=장폭현수막' },
+  ],
+  '윈드배너': [
+    { label: '윈드배너F형', href: '/banner/category/wind-banner?sub=윈드배너F형' },
+    { label: '윈드배너S형', href: '/banner/category/wind-banner?sub=윈드배너S형' },
+  ],
+  '입간판': [
+    { label: 'A형입간판', href: '/banner/category/sign-board?sub=A형입간판' },
+    { label: '물통입간판', href: '/banner/category/sign-board?sub=물통입간판' },
+  ],
+  '실사출력': [
+    { label: '접착용', href: '/banner/category/print-output?sub=접착용' },
+    { label: '비접착용', href: '/banner/category/print-output?sub=비접착용' },
+  ],
+  '족자봉·롤블라인드': [
+    { label: '족자봉', href: '/banner/category/scroll-blind?sub=족자봉' },
+    { label: '롤블라인드', href: '/banner/category/scroll-blind?sub=롤블라인드' },
+  ],
+};
+
+const megaMenuData = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
+}));
+
+// --- URL 쿼리로 제품 선택 ---
+const url = new URL(Astro.request.url);
+const productSlug = url.searchParams.get('product') || SIGN_PRODUCTS[0].slug;
+const selectedProduct = SIGN_PRODUCTS.find(p => p.slug === productSlug) || SIGN_PRODUCTS[0];
+---
+
+<Layout
+  title={`${selectedProduct.name} 견적 - issac.design 사인물`}
+  description={`${selectedProduct.name} 실시간 견적 계산기. ${selectedProduct.description}`}
+>
+
+<!-- 배너공장 공통 헤더 (메가메뉴 + 히어로) -->
+<div class="hl">
+  <BannerHeader
+    contactInfo={FALLBACK_CONTACT}
+    services={FALLBACK_SERVICES}
+    megaMenuData={megaMenuData}
+  />
+</div>
+
+<!-- 사인물 견적 페이지 본문 -->
+<main class="sign-quote-page">
+  <!-- 브레드크럼 네비게이션 -->
+  <nav class="sq-breadcrumb">
+    <div class="sq-wrap">
+      <a href="/banner">홈</a>
+      <span class="sq-sep">/</span>
+      <a href="/banner/quote/sign">사인물 견적</a>
+      <span class="sq-sep">/</span>
+      <span class="sq-current">{selectedProduct.name}</span>
+    </div>
+  </nav>
+
+  <!-- 제품 탭 네비게이션 -->
+  <section class="sq-tabs">
+    <div class="sq-wrap">
+      <div class="sq-tab-list">
+        {SIGN_PRODUCTS.map((p) => (
+          <a
+            href={`/banner/quote/sign?product=${p.slug}`}
+            class:list={['sq-tab', { active: p.slug === selectedProduct.slug }]}
+          >
+            <span class="sq-tab-name">{p.name}</span>
+            <span class="sq-tab-mode">
+              {p.pricingMode === 'area' ? '면적기반' : '고정사이즈'}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 견적 계산기 (React 클라이언트 컴포넌트) -->
+  <section class="sq-calculator">
+    <QuoteCalculator product={selectedProduct} client:load />
+  </section>
+
+  <!-- 제품 스펙 정보 -->
+  {selectedProduct.specs && selectedProduct.specs.length > 0 && (
+    <section class="sq-specs">
+      <div class="sq-wrap">
+        <h3 class="sq-specs-title">제품 사양</h3>
+        <div class="sq-specs-grid">
+          {selectedProduct.specs.map((spec) => (
+            <div class="sq-spec-item">
+              <dt>{spec.label}</dt>
+              <dd>{spec.value}</dd>
+            </div>
+          ))}
+          {selectedProduct.deliveryInfo && (
+            <div class="sq-spec-item">
+              <dt>배송 안내</dt>
+              <dd>{selectedProduct.deliveryInfo}</dd>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )}
+</main>
+
+</Layout>
+
+<style is:global>
+  /* 사인물 견적 페이지 전역 스타일 - BannerHeader의 .hl 계열과 공존 */
+  body:has(.sign-quote-page) {
+    background: #fafaf9 !important;
+  }
+
+  .sign-quote-page {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: #1c1917;
+  }
+
+  .sq-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ── 브레드크럼 ── */
+  .sq-breadcrumb {
+    background: #fff;
+    border-bottom: 1px solid #e7e5e4;
+    padding: 12px 0;
+  }
+
+  .sq-breadcrumb .sq-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #a8a29e;
+  }
+
+  .sq-breadcrumb a {
+    color: #78716c;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .sq-breadcrumb a:hover {
+    color: #1A4D2E;
+  }
+
+  .sq-sep {
+    color: #d6d3d1;
+  }
+
+  .sq-current {
+    color: #1c1917;
+    font-weight: 600;
+  }
+
+  /* ── 제품 탭 ── */
+  .sq-tabs {
+    background: #fff;
+    border-bottom: 1px solid #e7e5e4;
+    padding: 0;
+  }
+
+  .sq-tab-list {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sq-tab-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sq-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #78716c;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sq-tab:hover {
+    color: #1A4D2E;
+    background: #f0f8f3;
+  }
+
+  .sq-tab.active {
+    color: #1A4D2E;
+    border-bottom-color: #1A4D2E;
+    font-weight: 700;
+  }
+
+  .sq-tab-name {
+    font-size: 14px;
+  }
+
+  .sq-tab-mode {
+    font-size: 10px;
+    color: #a8a29e;
+    font-weight: 400;
+  }
+
+  .sq-tab.active .sq-tab-mode {
+    color: #1A4D2E;
+    opacity: 0.7;
+  }
+
+  /* ── 견적 계산기 영역 ── */
+  .sq-calculator {
+    padding: 0;
+  }
+
+  /* ── 제품 스펙 ── */
+  .sq-specs {
+    background: #fff;
+    border-top: 1px solid #e7e5e4;
+    padding: 48px 0 56px;
+  }
+
+  .sq-specs-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1c1917;
+    margin-bottom: 24px;
+    letter-spacing: -0.02em;
+  }
+
+  .sq-specs-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: #1A4D2E;
+    margin-right: 10px;
+    border-radius: 2px;
+    vertical-align: middle;
+  }
+
+  .sq-specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .sq-spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 8px;
+  }
+
+  .sq-spec-item dt {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1A4D2E;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .sq-spec-item dd {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1c1917;
+    margin: 0;
+  }
+
+  /* ── 반응형 ── */
+  @media (max-width: 768px) {
+    .sq-tab {
+      padding: 12px 16px;
+    }
+
+    .sq-specs-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

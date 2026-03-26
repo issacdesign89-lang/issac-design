@@ -1,0 +1,338 @@
+---
+/**
+ * 현수막 견적 페이지
+ * 현수막 카테고리 5개 상품의 실시간 견적 계산기
+ * QuoteCalculator React 컴포넌트를 client:load로 렌더링
+ */
+import Layout from '../../../layouts/Layout.astro';
+import BannerHeader from '../../../components/banner/BannerHeader.astro';
+import QuoteCalculator from '../../../components/banner/QuoteCalculator';
+import { HYUNSUMAK_PRODUCTS, DEFAULT_HYUNSUMAK, getHyunsumakProduct } from '../../../data/pricing/products-hyunsumak';
+
+// URL 쿼리 파라미터에서 선택된 상품 ID 읽기
+const url = new URL(Astro.request.url);
+const selectedProductId = url.searchParams.get('product');
+const selectedProduct = selectedProductId
+  ? (getHyunsumakProduct(selectedProductId) ?? DEFAULT_HYUNSUMAK)
+  : DEFAULT_HYUNSUMAK;
+
+// --- BannerHeader에 필요한 데이터 (index.astro와 동일 구조) ---
+
+const FALLBACK_CONTACT = {
+  company: 'issac.design',
+  phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123',
+  email: 'contact@issac.design',
+};
+
+const FALLBACK_SERVICES = [
+  { icon: 'banner', title: '배너·거치대', desc: '실내외 배너 거치대 전문 제작·판매' },
+  { icon: 'banner', title: '현수막', desc: '일반·장폭·솔벤·라텍스 현수막 제작' },
+  { icon: 'banner', title: '윈드배너', desc: 'F형·S형·H형 윈드배너 거치대·출력' },
+  { icon: 'banner', title: '입간판', desc: 'A형·물통·사인스탠드 입간판 제작' },
+  { icon: 'banner', title: '실사출력', desc: '접착·비접착·시트커팅·차량용 출력' },
+  { icon: 'banner', title: '족자봉·롤블라인드', desc: '족자봉, 롤블라인드 제작·판매' },
+];
+
+let contactInfo = FALLBACK_CONTACT;
+let services = FALLBACK_SERVICES;
+
+// Supabase 연락처 조회 (선택적)
+try {
+  const { supabase } = await import('../../../lib/supabase');
+  const { data } = await supabase.from('site_config').select('key, value').eq('category', 'contact');
+  if (data?.length) {
+    const m: Record<string, string> = {};
+    data.forEach((c: any) => { m[c.key] = c.value; });
+    contactInfo = {
+      company: m.company_name || FALLBACK_CONTACT.company,
+      phone: m.phone || FALLBACK_CONTACT.phone,
+      hours: m.business_hours || FALLBACK_CONTACT.hours,
+      address: m.address || FALLBACK_CONTACT.address,
+      email: m.email || FALLBACK_CONTACT.email,
+    };
+  }
+} catch {}
+
+// 메가메뉴 카테고리 데이터
+const categories = [
+  { id: 'banner-stand', name: '배너거치대', order_index: 1 },
+  { id: 'banner-print', name: '배너출력물', order_index: 2 },
+  { id: 'banner-cloth', name: '현수막', order_index: 3 },
+  { id: 'banner-cloth-bulk', name: '대량현수막', order_index: 3.5 },
+  { id: 'wind-banner', name: '윈드배너', order_index: 4 },
+  { id: 'sign-board', name: '입간판', order_index: 5 },
+  { id: 'sign-board-print', name: '입간판출력물', order_index: 5.5 },
+  { id: 'print-output', name: '실사출력', order_index: 6 },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드', order_index: 7 },
+  { id: 'custom-payment', name: '고객맞춤결제', order_index: 8 },
+];
+
+const SUBCATEGORY_MAP: Record<string, { label: string; href?: string }[]> = {
+  '배너거치대': [
+    { label: '실외거치대', href: '/banner/category/banner-stand?sub=실외거치대' },
+    { label: '실내거치대', href: '/banner/category/banner-stand?sub=실내거치대' },
+    { label: '철제거치대', href: '/banner/category/banner-stand?sub=철제거치대' },
+    { label: '자이언트폴', href: '/banner/category/banner-stand?sub=자이언트폴' },
+    { label: '미니배너', href: '/banner/category/banner-stand?sub=미니배너' },
+    { label: '특수배너', href: '/banner/category/banner-stand?sub=특수배너' },
+    { label: '부속품', href: '/banner/category/banner-stand?sub=부속품' },
+  ],
+  '배너출력물': [
+    { label: '배너출력물', href: '/banner/category/banner-print?sub=배너출력물' },
+    { label: '자이언트폴 출력물', href: '/banner/category/banner-print?sub=자이언트폴 출력물' },
+    { label: '미니배너 출력물', href: '/banner/category/banner-print?sub=미니배너 출력물' },
+    { label: '특수배너 출력물', href: '/banner/category/banner-print?sub=특수배너 출력물' },
+  ],
+  '현수막': [
+    { label: '일반현수막', href: '/banner/category/banner-cloth?sub=일반현수막' },
+    { label: '장폭현수막', href: '/banner/category/banner-cloth?sub=장폭현수막' },
+    { label: '솔벤현수막', href: '/banner/category/banner-cloth?sub=솔벤현수막' },
+    { label: '라텍스현수막', href: '/banner/category/banner-cloth?sub=라텍스현수막' },
+    { label: '테이블현수막', href: '/banner/category/banner-cloth?sub=테이블현수막' },
+    { label: '열전사메쉬', href: '/banner/category/banner-cloth?sub=열전사메쉬' },
+    { label: '텐트천', href: '/banner/category/banner-cloth?sub=텐트천' },
+    { label: '부직포', href: '/banner/category/banner-cloth?sub=부직포' },
+    { label: '부속품', href: '/banner/category/banner-cloth?sub=부속품' },
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
+  ],
+  '대량현수막': [
+    { label: '게릴라현수막', href: '/banner/category/banner-cloth?sub=게릴라현수막' },
+    { label: '족자현수막', href: '/banner/category/banner-cloth?sub=족자현수막' },
+    { label: '게시대현수막', href: '/banner/category/banner-cloth?sub=게시대현수막' },
+    { label: '어깨띠', href: '/banner/category/banner-cloth?sub=어깨띠' },
+  ],
+  '윈드배너': [
+    { label: '윈드배너F형', href: '/banner/category/wind-banner?sub=윈드배너F형' },
+    { label: '윈드배너S형', href: '/banner/category/wind-banner?sub=윈드배너S형' },
+    { label: '윈드배너H형', href: '/banner/category/wind-banner?sub=윈드배너H형' },
+    { label: '부속품', href: '/banner/category/wind-banner?sub=부속품' },
+    { label: 'F형 출력물', href: '/banner/category/wind-banner?sub=F형 출력물' },
+    { label: 'S형 출력물', href: '/banner/category/wind-banner?sub=S형 출력물' },
+    { label: 'H형 출력물', href: '/banner/category/wind-banner?sub=H형 출력물' },
+  ],
+  '입간판': [
+    { label: 'A형입간판', href: '/banner/category/sign-board?sub=A형입간판' },
+    { label: '물통입간판', href: '/banner/category/sign-board?sub=물통입간판' },
+    { label: '사인스탠드', href: '/banner/category/sign-board?sub=사인스탠드' },
+    { label: '부속품', href: '/banner/category/sign-board?sub=부속품' },
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
+  ],
+  '입간판출력물': [
+    { label: 'A형입간판 출력물', href: '/banner/category/sign-board-print?sub=A형입간판 출력물' },
+    { label: '물통입간판 출력물', href: '/banner/category/sign-board-print?sub=물통입간판 출력물' },
+    { label: '사인스탠드 출력물', href: '/banner/category/sign-board-print?sub=사인스탠드 출력물' },
+  ],
+  '실사출력': [
+    { label: '접착용', href: '/banner/category/print-output?sub=접착용' },
+    { label: '비접착용', href: '/banner/category/print-output?sub=비접착용' },
+    { label: '시트커팅', href: '/banner/category/print-output?sub=시트커팅' },
+    { label: '차량용자석', href: '/banner/category/print-output?sub=차량용자석' },
+    { label: 'POP·보드', href: '/banner/category/print-output?sub=POP·보드' },
+    { label: '등신대', href: '/banner/category/print-output?sub=등신대' },
+  ],
+  '족자봉·롤블라인드': [
+    { label: '족자봉', href: '/banner/category/scroll-blind?sub=족자봉' },
+    { label: '롤블라인드', href: '/banner/category/scroll-blind?sub=롤블라인드' },
+    { label: '부속품', href: '/banner/category/scroll-blind?sub=부속품' },
+  ],
+  '고객맞춤결제': [
+    { label: '고객맞춤결제', href: '/banner/category/custom-payment?sub=고객맞춤결제' },
+    { label: '디자인비결제', href: '/banner/category/custom-payment?sub=디자인비결제' },
+    { label: '배송비결제', href: '/banner/category/custom-payment?sub=배송비결제' },
+  ],
+};
+
+const megaMenuData = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  subcategories: SUBCATEGORY_MAP[cat.name] || [{ label: '전체보기' }],
+}));
+
+---
+
+<Layout title="현수막 견적 - issac.design" description="일반현수막, 솔벤트현수막, 방염현수막, 텐트천현수막, 족자현수막 실시간 견적 계산. 사이즈·옵션 선택 후 즉시 가격 확인.">
+
+<div class="hl">
+  <BannerHeader
+    contactInfo={contactInfo}
+    services={services}
+    megaMenuData={megaMenuData}
+  />
+
+  <main>
+    <!-- 페이지 브레드크럼 -->
+    <nav class="quote-breadcrumb">
+      <div class="wrap">
+        <a href="/banner">홈</a>
+        <span class="sep">/</span>
+        <a href="/banner/category/banner-cloth">현수막</a>
+        <span class="sep">/</span>
+        <span class="current">견적 계산</span>
+      </div>
+    </nav>
+
+    <!-- 상품 선택 드롭다운 -->
+    <section class="quote-selector-section">
+      <div class="wrap">
+        <div class="quote-selector-header">
+          <h1>현수막 견적 계산기</h1>
+          <p>상품을 선택하고, 사이즈와 옵션을 지정하면 실시간으로 견적이 계산됩니다.</p>
+        </div>
+        <div class="quote-product-select-wrap">
+          <label for="product-select">상품 선택</label>
+          <select id="product-select">
+            {HYUNSUMAK_PRODUCTS.map((p) => (
+              <option value={p.id} selected={p.id === selectedProduct.id}>
+                {p.name} — {p.description?.slice(0, 40)}...
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 견적 계산기 (React) -->
+    <section class="quote-calculator-section">
+      <div class="wrap">
+        <div id="quote-calculator-root">
+          <QuoteCalculator client:load product={selectedProduct} />
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+</Layout>
+
+<style is:global>
+  /* 견적 페이지 전용 스타일 */
+
+  .quote-breadcrumb {
+    background: #f5f5f5;
+    padding: 12px 0;
+    font-size: 13px;
+    color: #999;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .quote-breadcrumb a {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .quote-breadcrumb a:hover {
+    color: #1A4D2E;
+  }
+  .quote-breadcrumb .sep {
+    margin: 0 8px;
+    color: #ccc;
+  }
+  .quote-breadcrumb .current {
+    color: #222;
+    font-weight: 600;
+  }
+
+  .quote-selector-section {
+    padding: 32px 0 0;
+  }
+
+  .quote-selector-header {
+    margin-bottom: 20px;
+  }
+  .quote-selector-header h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #222;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .quote-selector-header h1::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 24px;
+    background: #1A4D2E;
+    border-radius: 2px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .quote-selector-header p {
+    font-size: 14px;
+    color: #999;
+    margin-left: 14px;
+  }
+
+  .quote-product-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .quote-product-select-wrap label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    white-space: nowrap;
+  }
+  .quote-product-select-wrap select {
+    flex: 1;
+    max-width: 500px;
+    padding: 10px 40px 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #222;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='%23999'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    transition: border-color 0.2s;
+  }
+  .quote-product-select-wrap select:focus {
+    outline: none;
+    border-color: #1A4D2E;
+    box-shadow: 0 0 0 3px rgba(26,77,46,.1);
+  }
+
+  .quote-calculator-section {
+    padding: 0 0 64px;
+  }
+
+  @media (max-width: 768px) {
+    .quote-selector-header h1 {
+      font-size: 1.3rem;
+    }
+    .quote-product-select-wrap {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .quote-product-select-wrap select {
+      max-width: 100%;
+    }
+  }
+</style>
+
+<script>
+  // 상품 선택 드롭다운 변경 시 URL 파라미터로 상품 ID를 전달하여 페이지 리로드
+  document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('product-select') as HTMLSelectElement | null;
+    if (!select) return;
+
+    select.addEventListener('change', () => {
+      const selectedId = select.value;
+      const url = new URL(window.location.href);
+      url.searchParams.set('product', selectedId);
+      window.location.href = url.toString();
+    });
+  });
+</script>

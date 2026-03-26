@@ -1,0 +1,282 @@
+---
+/**
+ * 시트지/실사출력물 견적 페이지
+ * - BannerHeader 공통 헤더 사용
+ * - QuoteCalculator를 client:load로 렌더링
+ * - URL 쿼리파라미터 ?product=slug 로 초기 상품 선택 지원
+ */
+import Layout from '../../../layouts/Layout.astro';
+import BannerHeader from '../../../components/banner/BannerHeader.astro';
+import QuoteCalculator from '../../../components/banner/QuoteCalculator';
+import {
+  SHEET_OUTPUT_PRODUCTS,
+  getSheetProductBySlug,
+} from '../../../data/pricing/products-sheet';
+
+// --- BannerHeader에 넘길 공통 데이터 ---
+const contactInfo = {
+  company: 'issac.design',
+  phone: '010-1234-5678',
+  hours: '평일 09:00~18:00 (토 09:00~15:00)',
+  address: '서울시 강남구 테헤란로 123',
+  email: 'contact@issac.design',
+};
+
+const services = [
+  { icon: 'banner', title: '배너·거치대', desc: '실내외 배너 거치대 전문 제작·판매' },
+  { icon: 'banner', title: '현수막', desc: '일반·장폭·솔벤·라텍스 현수막 제작' },
+  { icon: 'banner', title: '윈드배너', desc: 'F형·S형·H형 윈드배너 거치대·출력' },
+  { icon: 'banner', title: '입간판', desc: 'A형·물통·사인스탠드 입간판 제작' },
+  { icon: 'banner', title: '실사출력', desc: '접착·비접착·시트커팅·차량용 출력' },
+  { icon: 'banner', title: '족자봉·롤블라인드', desc: '족자봉, 롤블라인드 제작·판매' },
+];
+
+// 메가메뉴 카테고리
+const categories = [
+  { id: 'banner-stand', name: '배너거치대' },
+  { id: 'banner-print', name: '배너출력물' },
+  { id: 'banner-cloth', name: '현수막' },
+  { id: 'wind-banner', name: '윈드배너' },
+  { id: 'sign-board', name: '입간판' },
+  { id: 'print-output', name: '실사출력' },
+  { id: 'scroll-blind', name: '족자봉·롤블라인드' },
+];
+
+const megaMenuData = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  subcategories: [{ label: '전체보기', href: `/banner/category/${cat.id}` }],
+}));
+
+// 쿼리 파라미터에서 초기 상품 slug 읽기
+const url = new URL(Astro.request.url);
+const productSlug = url.searchParams.get('product') || SHEET_OUTPUT_PRODUCTS[0].slug;
+const initialProduct = getSheetProductBySlug(productSlug) || SHEET_OUTPUT_PRODUCTS[0];
+---
+
+<Layout
+  title={`${initialProduct.name} 견적 - 시트지/실사출력물 | issac.design`}
+  description={`${initialProduct.name} 실시간 견적 계산기. 사이즈·옵션 선택하면 즉시 가격 확인. 유포지, 캘지, 시트지, 메쉬, 평판출력.`}
+>
+
+<div class="hl">
+  <BannerHeader contactInfo={contactInfo} services={services} megaMenuData={megaMenuData} />
+
+  <!-- 상품 탭 네비게이션 -->
+  <section class="sheet-tab-section">
+    <div class="sheet-tab-wrap">
+      <h1 class="sheet-page-title">시트지/실사출력물 견적</h1>
+      <p class="sheet-page-desc">상품을 선택하고 사이즈·옵션을 입력하면 실시간으로 견적을 확인할 수 있습니다.</p>
+
+      <nav class="sheet-tabs" id="sheet-tabs">
+        {SHEET_OUTPUT_PRODUCTS.map((p) => (
+          <a
+            href={`/banner/quote/sheet?product=${p.slug}`}
+            class={`sheet-tab ${p.slug === initialProduct.slug ? 'active' : ''}`}
+            data-slug={p.slug}
+          >
+            <span class="sheet-tab-name">{p.name}</span>
+            {p.subcategory && <span class="sheet-tab-sub">{p.subcategory}</span>}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </section>
+
+  <!-- 견적 계산기 (React, client:load) -->
+  <section class="sheet-calculator-section">
+    <QuoteCalculator product={initialProduct} client:load />
+  </section>
+
+  <!-- 하단 안내 -->
+  <section class="sheet-info-section">
+    <div class="sheet-info-wrap">
+      <div class="sheet-info-card">
+        <h3>주문 안내</h3>
+        <ul>
+          <li>견적 확인 후 장바구니에 담거나 바로 주문할 수 있습니다.</li>
+          <li>디자인 파일은 주문 후 업로드해 주세요.</li>
+          <li>대량 주문(10개 이상)은 별도 견적을 요청해 주세요.</li>
+        </ul>
+      </div>
+      <div class="sheet-info-card">
+        <h3>배송 안내</h3>
+        <ul>
+          <li>제작 후 1~2일 이내 출고 (평판출력: 2~3일)</li>
+          <li>전국 택배 배송 (도서산간 추가 비용 발생)</li>
+          <li>급행 출고가 필요하시면 전화 문의 바랍니다.</li>
+        </ul>
+      </div>
+      <div class="sheet-info-card">
+        <h3>문의</h3>
+        <ul>
+          <li>전화: {contactInfo.phone}</li>
+          <li>영업시간: {contactInfo.hours}</li>
+          <li>이메일: {contactInfo.email}</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+</Layout>
+
+<style is:global>
+  /* ===== 시트지 견적 페이지 전용 스타일 ===== */
+
+  /* 탭 섹션 */
+  .sheet-tab-section {
+    background: #f8f8f7;
+    border-bottom: 1px solid #e7e5e4;
+    padding: 32px 0 0;
+  }
+
+  .sheet-tab-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .sheet-page-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1c1917;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+
+  .sheet-page-desc {
+    font-size: 14px;
+    color: #78716c;
+    margin: 0 0 24px;
+  }
+
+  /* 탭 네비게이션 */
+  .sheet-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .sheet-tabs::-webkit-scrollbar { display: none; }
+
+  .sheet-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #78716c;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sheet-tab:hover {
+    color: #1A4D2E;
+    background: rgba(26, 77, 46, 0.04);
+  }
+
+  .sheet-tab.active {
+    color: #1A4D2E;
+    border-bottom-color: #1A4D2E;
+  }
+
+  .sheet-tab-name {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .sheet-tab-sub {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+
+  /* 계산기 섹션 */
+  .sheet-calculator-section {
+    background: #fafaf9;
+    min-height: 600px;
+  }
+
+  /* 하단 안내 섹션 */
+  .sheet-info-section {
+    background: #fff;
+    border-top: 1px solid #e7e5e4;
+    padding: 48px 0;
+  }
+
+  .sheet-info-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .sheet-info-card {
+    padding: 24px;
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 10px;
+  }
+
+  .sheet-info-card h3 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1A4D2E;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .sheet-info-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .sheet-info-card li {
+    font-size: 13px;
+    color: #57534e;
+    line-height: 1.7;
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .sheet-info-card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    background: #1A4D2E;
+    border-radius: 50%;
+  }
+
+  /* 반응형 */
+  @media (max-width: 768px) {
+    .sheet-page-title {
+      font-size: 22px;
+    }
+
+    .sheet-tab {
+      padding: 10px 16px;
+    }
+
+    .sheet-tab-name {
+      font-size: 13px;
+    }
+
+    .sheet-info-wrap {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+</style>
