@@ -3,9 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { supabaseBrowser as supabase } from '../../../lib/supabase-browser';
 import { SearchInput, Pagination, ConfirmModal, EmptyState, Toggle } from '../ui';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, ExternalLink } from 'lucide-react';
 
 const PAGE_SIZE = 20;
+
+const PRICING_MODE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  area: { label: '면적', color: '#15803d', bg: '#dcfce7' },
+  fixed: { label: '고정', color: '#1d4ed8', bg: '#dbeafe' },
+  quantity: { label: '수량', color: '#c2410c', bg: '#ffedd5' },
+};
+
+const QUOTE_PAGE_MAP: Record<string, string> = {
+  'banner-cloth': '/banner/quote/hyunsumak',
+  'banner-cloth-bulk': '/banner/quote/hyunsumak',
+  'print-output': '/banner/quote/sheet',
+  'sign-board': '/banner/quote/sign',
+  'sign-board-print': '/banner/quote/sign',
+  'banner-stand': '/banner/quote/stand',
+};
 
 const BANNER_CATEGORIES = [
   { id: 'banner-stand', name: '배너거치대' },
@@ -38,6 +53,7 @@ export default function BannerProductListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [pricingModeFilter, setPricingModeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<BannerProduct | null>(null);
@@ -84,6 +100,14 @@ export default function BannerProductListPage() {
   useEffect(() => { if (search || categoryFilter || page > 1) fetchProducts(); }, [fetchProducts]);
   useEffect(() => { setPage(1); }, [search, categoryFilter]);
 
+  const getPricingMode = (product: BannerProduct): string => {
+    return (product.options as any)?.pricing_mode || 'fixed';
+  };
+
+  const filteredProducts = pricingModeFilter
+    ? products.filter(p => getPricingMode(p) === pricingModeFilter)
+    : products;
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const { error } = await supabase.from('products').delete().eq('id', deleteTarget.id);
@@ -95,6 +119,22 @@ export default function BannerProductListPage() {
   const handleToggle = async (id: string, visible: boolean) => {
     await supabase.from('products').update({ is_visible: visible }).eq('id', id);
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_visible: visible } : p));
+  };
+
+  const handleDuplicate = async (product: BannerProduct) => {
+    const { id, created_at, ...rest } = product;
+    const newProduct = {
+      ...rest,
+      slug: `${product.slug}-copy`,
+      name: `${product.name} (복사)`,
+    };
+    const { data, error } = await supabase.from('products').insert(newProduct as any).select('id').single();
+    if (error) {
+      toast.error('복제 실패');
+      return;
+    }
+    toast.success('상품이 복제되었습니다');
+    navigate(`/banner-products/${data.id}`);
   };
 
   const getCatName = (id: string) => BANNER_CATEGORIES.find(c => c.id === id)?.name || id;
@@ -120,6 +160,16 @@ export default function BannerProductListPage() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        <select
+          className="admin-select"
+          value={pricingModeFilter}
+          onChange={e => setPricingModeFilter(e.target.value)}
+        >
+          <option value="">전체 가격모드</option>
+          <option value="area">면적 기반</option>
+          <option value="fixed">고정가</option>
+          <option value="quantity">수량 기반</option>
+        </select>
       </div>
 
       {loading ? (
@@ -135,44 +185,78 @@ export default function BannerProductListPage() {
                 <th>상품명</th>
                 <th style={{ width: 120 }}>카테고리</th>
                 <th style={{ width: 100 }}>소분류</th>
+                <th style={{ width: 90 }}>가격 모드</th>
                 <th style={{ width: 100 }}>가격</th>
                 <th style={{ width: 80 }}>노출</th>
-                <th style={{ width: 120 }}>관리</th>
+                <th style={{ width: 160 }}>관리</th>
               </tr>
             </thead>
             <tbody>
-              {products.map(p => (
-                <tr key={p.id}>
-                  <td>
-                    {p.thumbnail ? (
-                      <img src={p.thumbnail} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
-                    ) : (
-                      <div style={{ width: 48, height: 48, background: '#f0f0f0', borderRadius: 4 }} />
-                    )}
-                  </td>
-                  <td>
-                    <strong style={{ cursor: 'pointer', color: '#1A4D2E' }} onClick={() => navigate(`/banner-products/${p.id}`)}>
-                      {p.name}
-                    </strong>
-                  </td>
-                  <td><span className="admin-badge">{getCatName(p.category_id)}</span></td>
-                  <td style={{ fontSize: 13, color: '#666' }}>{(p.options as any)?.subcategory || '-'}</td>
-                  <td>{p.price || '미정'}</td>
-                  <td>
-                    <Toggle checked={p.is_visible} onChange={v => handleToggle(p.id, v)} />
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="admin-btn-icon" title="수정" onClick={() => navigate(`/banner-products/${p.id}`)}>
-                        <Edit size={15} />
-                      </button>
-                      <button className="admin-btn-icon admin-btn-danger" title="삭제" onClick={() => setDeleteTarget(p)}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filteredProducts.map(p => {
+                const mode = getPricingMode(p);
+                const modeInfo = PRICING_MODE_LABELS[mode] || PRICING_MODE_LABELS.fixed;
+                const quotePage = QUOTE_PAGE_MAP[p.category_id] || null;
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      {p.thumbnail ? (
+                        <img src={p.thumbnail} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
+                      ) : (
+                        <div style={{ width: 48, height: 48, background: '#f0f0f0', borderRadius: 4 }} />
+                      )}
+                    </td>
+                    <td>
+                      <strong style={{ cursor: 'pointer', color: '#1A4D2E' }} onClick={() => navigate(`/banner-products/${p.id}`)}>
+                        {p.name}
+                      </strong>
+                    </td>
+                    <td><span className="admin-badge">{getCatName(p.category_id)}</span></td>
+                    <td style={{ fontSize: 13, color: '#666' }}>{(p.options as any)?.subcategory || '-'}</td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: 9999,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: modeInfo.color,
+                        background: modeInfo.bg,
+                      }}>
+                        {modeInfo.label}
+                      </span>
+                    </td>
+                    <td>{p.price || '미정'}</td>
+                    <td>
+                      <Toggle checked={p.is_visible} onChange={v => handleToggle(p.id, v)} />
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="admin-btn-icon" title="수정" onClick={() => navigate(`/banner-products/${p.id}`)}>
+                          <Edit size={15} />
+                        </button>
+                        <button className="admin-btn-icon" title="복제" onClick={() => handleDuplicate(p)}>
+                          <Copy size={15} />
+                        </button>
+                        {quotePage && (
+                          <a
+                            className="admin-btn-icon"
+                            title="견적 미리보기"
+                            href={quotePage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <ExternalLink size={15} />
+                          </a>
+                        )}
+                        <button className="admin-btn-icon admin-btn-danger" title="삭제" onClick={() => setDeleteTarget(p)}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
