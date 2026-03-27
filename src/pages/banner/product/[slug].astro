@@ -5,7 +5,10 @@
  */
 import Layout from '../../../layouts/Layout.astro';
 import BannerHeader from '../../../components/banner/BannerHeader.astro';
+import QuoteCalculator from '../../../components/banner/QuoteCalculator';
 import { supabase } from '../../../lib/supabase';
+import type { ProductConfig } from '../../../data/pricing/types';
+import { COMMON_DESIGN_OPTIONS } from '../../../data/pricing/types';
 
 const { slug } = Astro.params;
 
@@ -127,8 +130,74 @@ function getCategoryName(id: string): string {
   return map[id] || id;
 }
 
+// --- Supabase → ProductConfig 변환 헬퍼 ---
+function buildProductConfig(data: any, opts: any): ProductConfig {
+  const pm = opts.pricing_mode || 'fixed';
+  const sc = opts.size_config || {};
+  const dOpts = opts.design_options || {};
+  const qc = opts.quantity_config || {};
+
+  const optionGroups = (opts.option_groups || []).map((g: any, i: number) => ({
+    id: g.id || `group-${i}`,
+    label: g.group || g.label || `옵션 ${i + 1}`,
+    type: (g.type as 'select' | 'radio' | 'button') || 'select',
+    required: g.required ?? true,
+    options: (g.items || g.options || []).map((item: any, j: number) => ({
+      label: item.label,
+      value: item.value ?? String(j),
+      price: Number(item.price) || 0,
+      priceType: (item.priceType as 'perSqm' | 'fixed' | 'perUnit') || (pm === 'area' ? 'perSqm' : 'fixed'),
+      default: j === 0,
+    })),
+  }));
+
+  let designOptions = COMMON_DESIGN_OPTIONS;
+  if (dOpts.useCommon === false && Array.isArray(dOpts.custom) && dOpts.custom.length > 0) {
+    designOptions = dOpts.custom.map((d: any) => ({
+      label: d.label, value: d.label, price: Number(d.price) || 0, description: d.description || '',
+    }));
+  }
+
+  return {
+    id: data.id || data.slug,
+    slug: data.slug,
+    name: data.name,
+    categoryId: data.category_id || '',
+    categoryName: getCategoryName(data.category_id || ''),
+    subcategory: opts.subcategory || '',
+    description: data.description || '',
+    thumbnail: data.thumbnail || '',
+    pricingMode: pm,
+    basePrice: Number(opts.base_price) || 0,
+    areaPriceTable: opts.area_price_tiers?.length ? { tiers: opts.area_price_tiers, minArea: 1 } : undefined,
+    quantityPriceTable: opts.quantity_price_tiers?.length ? { tiers: opts.quantity_price_tiers } : undefined,
+    sizeInput: {
+      enabled: sc.enabled ?? (pm === 'area'),
+      widthLabel: sc.widthLabel || '가로',
+      heightLabel: sc.heightLabel || '세로',
+      unit: sc.unit || 'cm',
+      minWidth: sc.minWidth || 10, maxWidth: sc.maxWidth || 10000,
+      minHeight: sc.minHeight || 10, maxHeight: sc.maxHeight || 10000,
+      maxRollWidth: sc.maxRollWidth || undefined,
+    },
+    quantityInput: {
+      enabled: qc.enabled ?? true,
+      label: qc.label || '수량',
+      min: qc.min || 1, max: qc.max || 9999,
+      presets: Array.isArray(qc.presets) ? qc.presets : undefined,
+    },
+    optionGroups,
+    designOptions,
+    specs: typeof data.specs === 'object' && data.specs !== null && !Array.isArray(data.specs)
+      ? Object.entries(data.specs).map(([k, v]) => ({ label: k, value: v as string }))
+      : [],
+    notes: Array.isArray(opts.notes) ? opts.notes : [],
+  };
+}
+
 // --- Supabase fetch (primary) ---
 let product: any = null;
+let productConfig: ProductConfig | null = null;
 
 try {
   const { data, error } = await supabase
@@ -155,6 +224,10 @@ try {
       deliveryOptions: Array.isArray(opts.delivery_options) ? opts.delivery_options : [],
       deadlines: { courier: opts.deadline_courier || '', pickup: opts.deadline_pickup || '' },
     };
+    // 어드민에서 pricing_mode가 설정된 경우 ProductConfig 생성
+    if (opts.pricing_mode) {
+      productConfig = buildProductConfig(data, opts);
+    }
   }
 } catch (e) {
   console.error('[banner/product] Supabase fetch failed:', e);
@@ -1796,6 +1869,33 @@ if (!product) return Astro.redirect('/banner');
   }
   .pd-image-thumb.active { border-color: #1A4D2E; }
 
+  /* QuoteCalculator 영역 */
+  .pd-quote-area {
+    padding: 0 0 0 24px;
+    border-left: 1px solid #eee;
+  }
+  .pd-notes {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: #fff8f0;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+  }
+  .pd-notes h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0 0 8px;
+  }
+  .pd-notes ul { list-style: none; padding: 0; margin: 0; }
+  .pd-notes li {
+    font-size: 13px;
+    color: #78350f;
+    padding: 4px 0;
+    line-height: 1.5;
+  }
+  .pd-notes li::before { content: '※ '; color: #b45309; }
+
   /* Center: Options */
   .pd-options {
     padding: 0 24px;
@@ -2134,6 +2234,7 @@ if (!product) return Astro.redirect('/banner');
     }
     .pd-image { padding-right: 0; margin-bottom: 24px; }
     .pd-options { padding: 0; border-left: none; }
+    .pd-quote-area { padding: 0; border-left: none; grid-column: 1 / -1 !important; }
   }
 </style>
 
@@ -2162,70 +2263,89 @@ if (!product) return Astro.redirect('/banner');
         </div>
       </div>
 
-      <!-- Center: Options -->
-      <div class="pd-options">
-        <div class="pd-title-row">
-          <div>
-            <span class="pd-item-label">품목</span>
-            <span class="pd-item-value" style="margin-left:12px;">{product.subcategory}</span>
-          </div>
-          <button class="pd-guide-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            작업가이드
-          </button>
-        </div>
-
-        {(product.options || []).map((opt: any) => (
-          <div class="pd-option-group">
-            <label class="pd-option-label">{opt.group}</label>
-            <div class="pd-qty-row">
-              <select class="pd-option-select" data-group={opt.group}>
-                {(opt.items || []).map((item: any) => (
-                  <option value={item.price}>{item.label}{item.price > 0 ? ` (+${item.price.toLocaleString()}원)` : item.price < 0 ? ` (${item.price.toLocaleString()}원)` : ''}</option>
+      <!-- Center: Options + Right: Summary → QuoteCalculator 또는 기존 UI -->
+      {productConfig ? (
+        <!-- 어드민에서 pricing_mode 설정된 상품: QuoteCalculator 사용 -->
+        <div class="pd-quote-area" style="grid-column: 2 / 4;">
+          <QuoteCalculator client:load product={productConfig} />
+          {productConfig.notes && productConfig.notes.length > 0 && (
+            <div class="pd-notes">
+              <h3>안내사항</h3>
+              <ul>
+                {productConfig.notes.map((note: string) => (
+                  <li>{note}</li>
                 ))}
-              </select>
-              <input type="number" class="pd-qty-input" value="1" min="1" data-group={opt.group} />
-              <span class="pd-qty-unit">개</span>
+              </ul>
+            </div>
+          )}
+        </div>
+      ) : (
+        <!-- 기존 상품: 레거시 옵션 UI 유지 -->
+        <div class="pd-options">
+          <div class="pd-title-row">
+            <div>
+              <span class="pd-item-label">품목</span>
+              <span class="pd-item-value" style="margin-left:12px;">{product.subcategory}</span>
+            </div>
+            <button class="pd-guide-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              작업가이드
+            </button>
+          </div>
+
+          {(product.options || []).map((opt: any) => (
+            <div class="pd-option-group">
+              <label class="pd-option-label">{opt.group}</label>
+              <div class="pd-qty-row">
+                <select class="pd-option-select" data-group={opt.group}>
+                  {(opt.items || []).map((item: any) => (
+                    <option value={item.price}>{item.label}{item.price > 0 ? ` (+${item.price.toLocaleString()}원)` : item.price < 0 ? ` (${item.price.toLocaleString()}원)` : ''}</option>
+                  ))}
+                </select>
+                <input type="number" class="pd-qty-input" value="1" min="1" data-group={opt.group} />
+                <span class="pd-qty-unit">개</span>
+              </div>
+            </div>
+          ))}
+
+          <!-- Delivery -->
+          <div class="pd-delivery">
+            <label class="pd-option-label">배송방법</label>
+            <select class="pd-delivery-select" id="delivery-select">
+              {(product.deliveryOptions || []).map((d: any) => (
+                <option value={d.label} data-info={d.info || ''}>{d.label}</option>
+              ))}
+            </select>
+            <div class="pd-delivery-info" id="delivery-info">
+              {product.deliveryOptions[0]?.info}
             </div>
           </div>
-        ))}
 
-        <!-- Delivery -->
-        <div class="pd-delivery">
-          <label class="pd-option-label">배송방법</label>
-          <select class="pd-delivery-select" id="delivery-select">
-            {(product.deliveryOptions || []).map((d: any) => (
-              <option value={d.label} data-info={d.info || ''}>{d.label}</option>
-            ))}
-          </select>
-          <div class="pd-delivery-info" id="delivery-info">
-            {product.deliveryOptions[0]?.info}
+          <!-- File -->
+          <div class="pd-file-row">
+            <label class="pd-option-label">파일첨부</label>
+            <div class="pd-file-btns">
+              <button class="pd-file-btn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                파일첨부
+              </button>
+              <button class="pd-file-btn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                템플릿다운
+              </button>
+            </div>
+          </div>
+
+          <!-- Note -->
+          <div class="pd-note">
+            <label class="pd-option-label">요청사항</label>
+            <textarea placeholder="요청사항을 입력해 주세요."></textarea>
           </div>
         </div>
+      )}
 
-        <!-- File -->
-        <div class="pd-file-row">
-          <label class="pd-option-label">파일첨부</label>
-          <div class="pd-file-btns">
-            <button class="pd-file-btn" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              파일첨부
-            </button>
-            <button class="pd-file-btn" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              템플릿다운
-            </button>
-          </div>
-        </div>
-
-        <!-- Note -->
-        <div class="pd-note">
-          <label class="pd-option-label">요청사항</label>
-          <textarea placeholder="요청사항을 입력해 주세요."></textarea>
-        </div>
-      </div>
-
-      <!-- Right: Summary -->
+      {!productConfig && (
+      <!-- Right: Summary (레거시 전용) -->
       <div class="pd-summary">
         <div class="pd-summary-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7v10M16 7v10M2 12h20"/></svg>
@@ -2279,6 +2399,7 @@ if (!product) return Astro.redirect('/banner');
           </div>
         </div>
       </div>
+      )}
     </div>
   </div>
 
